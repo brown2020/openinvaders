@@ -1,5 +1,5 @@
 // src/components/game/GameCanvas.tsx
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { GAME_DIMENSIONS } from "@/lib/constants/game";
 import { Entity } from "@/lib/entities/entity";
 
@@ -45,7 +45,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
   }, [onReady]);
 
   // Render function
-  const render = () => {
+  const render = useCallback(() => {
     if (!canvasRef.current || !mainCtxRef.current) return;
 
     const ctx = mainCtxRef.current;
@@ -75,7 +75,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
 
     // Continue render loop
     animationFrameRef.current = requestAnimationFrame(render);
-  };
+  }, [background, entities]);
 
   // Set up render loop
   useEffect(() => {
@@ -88,7 +88,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [entities, background]); // Recreate loop when entities or background changes
+  }, [entities, background, render]); // Recreate loop when entities or background changes
 
   // Debug grid rendering
   const renderDebugGrid = (ctx: CanvasRenderingContext2D) => {
