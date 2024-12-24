@@ -236,7 +236,9 @@ const Game: React.FC = () => {
 
           // Alien shooting
           if (
-            Math.random() < ALIEN.SHOOT_CHANCE * (deltaTime / 1000) &&
+            Math.random() <
+              (ALIEN.BASE_SHOOT_CHANCE + ALIEN.WAVE_SHOOT_MULTIPLIER * wave) *
+                (deltaTime / 1000) &&
             alien.canShoot(aliensRef.current)
           ) {
             projectilesRef.current.push(alien.shoot());

@@ -97,7 +97,7 @@ export class EntityManager {
 
         // Alien shooting
         if (
-          Math.random() < ALIEN.SHOOT_CHANCE * (deltaTime / 1000) &&
+          Math.random() < ALIEN.BASE_SHOOT_CHANCE * (deltaTime / 1000) &&
           alien.canShoot(this.aliens)
         ) {
           this.projectiles.push(alien.shoot());

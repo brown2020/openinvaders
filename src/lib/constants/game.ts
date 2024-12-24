@@ -30,7 +30,8 @@ export const ALIEN = {
     MIDDLE_ROW: 20, // Points for middle row aliens
     BOTTOM_ROW: 10, // Points for bottom row aliens
   },
-  SHOOT_CHANCE: 0.02, // Probability of an alien shooting each frame
+  BASE_SHOOT_CHANCE: 0.015, // Base probability of an alien shooting each frame
+  WAVE_SHOOT_MULTIPLIER: 0.002, // Additional shoot chance per wave
 } as const;
 
 export const BARRIER = {
