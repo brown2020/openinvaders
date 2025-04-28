@@ -271,7 +271,7 @@ const Game: React.FC = () => {
 
       animationFrameRef.current = requestAnimationFrame(updateGame);
     },
-    [gameState, checkCollisions, initializeGame]
+    [gameState, checkCollisions, initializeGame, wave]
   );
 
   // Game loop effect
