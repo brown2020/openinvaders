@@ -6,12 +6,15 @@ import {
   PLAYER,
   ALIEN,
   BARRIER,
+  PROJECTILE,
+  UFO,
 } from "@/lib/constants/game";
 import { Player } from "@/lib/entities/player";
 import { Alien, AlienFormation } from "@/lib/entities/alien";
 import { Barrier } from "@/lib/entities/barrier";
 import { Projectile } from "@/lib/entities/projectile";
 import { Entity } from "@/lib/entities/entity";
+import { Ufo, getUfoScore } from "@/lib/entities/ufo";
 import { soundManager } from "@/lib/sounds/SoundManager";
 import { SoundType } from "@/lib/sounds/SoundTypes";
 import GameCanvas from "./GameCanvas";
@@ -35,6 +38,7 @@ const Game: React.FC = () => {
   const [wave, setWave] = useState(1);
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   const [showHelp, setShowHelp] = useState(false);
+  const [entitiesVersion, setEntitiesVersion] = useState(0);
   const [scoreNotifications, setScoreNotifications] = useState<
     ScoreNotificationInfo[]
   >([]);
@@ -44,11 +48,14 @@ const Game: React.FC = () => {
   const aliensRef = useRef<Alien[]>([]);
   const barriersRef = useRef<Barrier[]>([]);
   const projectilesRef = useRef<Projectile[]>([]);
+  const ufoRef = useRef<Ufo | null>(null);
+  const nextUfoSpawnRef = useRef<number>(0);
 
   // Animation frame and timing
   const animationFrameRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
   const notificationIdRef = useRef(0);
+  const bumpEntities = useCallback(() => setEntitiesVersion((v) => v + 1), []);
 
   const addScoreNotification = useCallback(
     (points: number, x: number, y: number) => {
@@ -136,6 +143,15 @@ const Game: React.FC = () => {
 
     // Clear projectiles
     projectilesRef.current = [];
+    bumpEntities();
+
+    // Reset UFO
+    ufoRef.current = null;
+    nextUfoSpawnRef.current =
+      performance.now() +
+      (UFO.MIN_SPAWN_MS +
+        Math.random() * (UFO.MAX_SPAWN_MS - UFO.MIN_SPAWN_MS));
+    bumpEntities();
 
     // Reset score for new game, keep score for next wave
     if (gameState === GAME_STATES.MENU || gameState === GAME_STATES.GAME_OVER) {
@@ -146,7 +162,7 @@ const Game: React.FC = () => {
     // Start game
     setGameState(GAME_STATES.PLAYING);
     soundManager.setMuted(!isSoundEnabled);
-  }, [gameState, isSoundEnabled]);
+  }, [gameState, isSoundEnabled, bumpEntities]);
 
   const checkCollisions = useCallback(() => {
     if (!playerRef.current) return;
@@ -174,6 +190,32 @@ const Game: React.FC = () => {
             soundManager.play(SoundType.ALIEN_KILLED);
             break;
           }
+        }
+
+        // Check UFO hit
+        if (
+          ufoRef.current &&
+          projectile.isActive &&
+          projectile.collidesWith(ufoRef.current)
+        ) {
+          projectile.isActive = false;
+          const bonus = getUfoScore();
+          const newScore = score + bonus;
+          setScore(newScore);
+          if (newScore > highScore) {
+            setHighScore(newScore);
+          }
+          addScoreNotification(
+            bonus,
+            ufoRef.current.position.x,
+            ufoRef.current.position.y
+          );
+          soundManager.play(SoundType.EXPLOSION);
+          ufoRef.current = null;
+          nextUfoSpawnRef.current =
+            performance.now() +
+            (UFO.MIN_SPAWN_MS +
+              Math.random() * (UFO.MAX_SPAWN_MS - UFO.MIN_SPAWN_MS));
         }
       } else {
         // Alien projectile hits player
@@ -241,8 +283,14 @@ const Game: React.FC = () => {
                 (deltaTime / 1000) &&
             alien.canShoot(aliensRef.current)
           ) {
-            projectilesRef.current.push(alien.shoot());
-            soundManager.play(SoundType.SHOOT);
+            const alienShots = projectilesRef.current.filter(
+              (p) => !p.isPlayerProjectile
+            ).length;
+            if (alienShots < PROJECTILE.CAPS.ALIEN_MAX) {
+              projectilesRef.current.push(alien.shoot());
+              soundManager.play(SoundType.SHOOT);
+              bumpEntities();
+            }
           }
         }
       });
@@ -254,11 +302,31 @@ const Game: React.FC = () => {
         }
       });
 
+      // Update UFO spawn/movement
+      if (timestamp >= nextUfoSpawnRef.current && !ufoRef.current) {
+        const fromLeft = Math.random() < 0.5;
+        ufoRef.current = new Ufo({ fromLeft });
+        bumpEntities();
+      }
+      if (ufoRef.current) {
+        ufoRef.current.update(deltaTime);
+        // Despawn if out of bounds
+        if (!ufoRef.current.isActive) {
+          ufoRef.current = null;
+          nextUfoSpawnRef.current =
+            timestamp +
+            (UFO.MIN_SPAWN_MS +
+              Math.random() * (UFO.MAX_SPAWN_MS - UFO.MIN_SPAWN_MS));
+          bumpEntities();
+        }
+      }
+
       // Update and filter projectiles
       projectilesRef.current = projectilesRef.current.filter((projectile) => {
         projectile.update(deltaTime);
         return projectile.isActive;
       });
+      // No bump here; rendering is driven by requestAnimationFrame and entitiesVersion changes on add/remove
 
       // Check collisions
       checkCollisions();
@@ -271,7 +339,7 @@ const Game: React.FC = () => {
 
       animationFrameRef.current = requestAnimationFrame(updateGame);
     },
-    [gameState, checkCollisions, initializeGame, wave]
+    [gameState, checkCollisions, initializeGame, wave, bumpEntities]
   );
 
   // Game loop effect
@@ -296,8 +364,10 @@ const Game: React.FC = () => {
             ...aliensRef.current,
             ...projectilesRef.current,
             ...barriersRef.current,
+            ...(ufoRef.current ? [ufoRef.current as Entity] : []),
             ...(playerRef.current ? [playerRef.current as Entity] : []),
           ]}
+          version={entitiesVersion}
           className="border border-green-500"
         />
 
@@ -342,10 +412,16 @@ const Game: React.FC = () => {
         }}
         onShoot={() => {
           if (playerRef.current && gameState === GAME_STATES.PLAYING) {
-            const projectile = playerRef.current.shoot();
-            if (projectile) {
-              projectilesRef.current.push(projectile);
-              soundManager.play(SoundType.SHOOT);
+            const existingPlayerShots = projectilesRef.current.filter(
+              (p) => p.isPlayerProjectile
+            ).length;
+            if (existingPlayerShots < PROJECTILE.CAPS.PLAYER_MAX) {
+              const projectile = playerRef.current.shoot();
+              if (projectile) {
+                projectilesRef.current.push(projectile);
+                soundManager.play(SoundType.SHOOT);
+                bumpEntities();
+              }
             }
           }
         }}

@@ -35,9 +35,9 @@ export class Barrier extends Entity {
     return data;
   }
 
-  update(deltaTime: number): void {
-    console.log("deltaTime", deltaTime);
+  update(_deltaTime: number): void {
     // Barriers don't need regular updates
+    void _deltaTime;
   }
 
   render(ctx: CanvasRenderingContext2D): void {

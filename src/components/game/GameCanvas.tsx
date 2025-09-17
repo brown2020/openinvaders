@@ -8,6 +8,7 @@ interface GameCanvasProps {
   background?: string;
   className?: string;
   onReady?: (context: CanvasRenderingContext2D) => void;
+  version?: number;
 }
 
 interface RenderableEntity extends Entity {
@@ -19,6 +20,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
   background = "#000",
   className = "",
   onReady,
+  version = 0,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mainCtxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -88,7 +90,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [entities, background, render]); // Recreate loop when entities or background changes
+  }, [entities, background, render, version]); // Recreate loop when entities/background/version changes
 
   // Debug grid rendering
   const renderDebugGrid = (ctx: CanvasRenderingContext2D) => {

@@ -2,6 +2,8 @@
 import { Entity, EntityConfig, Position } from "./entity";
 import { ALIEN, PROJECTILE, GAME_DIMENSIONS } from "@/lib/constants/game";
 import { Projectile, ProjectileConfig } from "./projectile";
+import { soundManager } from "@/lib/sounds/SoundManager";
+import { SoundType } from "@/lib/sounds/SoundTypes";
 
 export type AlienType = "TOP" | "MIDDLE" | "BOTTOM";
 
@@ -14,61 +16,61 @@ export interface AlienConfig extends EntityConfig {
 
 export class AlienFormation {
   private static direction: number = 1; // 1 for right, -1 for left
-  private static dropDistance: number = 30;
   private static moveTimer: number = 0;
-  private static currentSpeed: number = ALIEN.MOVE_INTERVAL;
+  private static currentInterval: number = ALIEN.MOVE_INTERVAL;
+  private static marchStepIndex: number = 0;
 
   static update(aliens: Alien[], deltaTime: number): void {
     this.moveTimer += deltaTime;
 
-    if (this.moveTimer >= this.currentSpeed) {
-      this.moveTimer = 0;
+    if (this.moveTimer < this.currentInterval) return;
+    this.moveTimer = 0;
 
-      // Check formation boundaries
-      let hitEdge = false;
-      const leftMost = Math.min(
-        ...aliens.filter((a) => !a.isDestroyed).map((a) => a.position.x)
-      );
-      const rightMost = Math.max(
-        ...aliens
-          .filter((a) => !a.isDestroyed)
-          .map((a) => a.position.x + a.dimensions.width)
-      );
+    const alive = aliens.filter((a) => !a.isDestroyed);
+    if (alive.length === 0) return;
 
-      if (
-        (rightMost >= GAME_DIMENSIONS.WIDTH - GAME_DIMENSIONS.MARGIN &&
-          this.direction > 0) ||
-        (leftMost <= GAME_DIMENSIONS.MARGIN && this.direction < 0)
-      ) {
-        hitEdge = true;
-      }
+    const leftMost = Math.min(...alive.map((a) => a.position.x));
+    const rightMost = Math.max(
+      ...alive.map((a) => a.position.x + a.dimensions.width)
+    );
 
-      // Move aliens
-      aliens.forEach((alien) => {
-        if (alien.isDestroyed) return;
+    const hitEdge =
+      (rightMost >= GAME_DIMENSIONS.WIDTH - GAME_DIMENSIONS.MARGIN &&
+        this.direction > 0) ||
+      (leftMost <= GAME_DIMENSIONS.MARGIN && this.direction < 0);
 
-        if (hitEdge) {
-          alien.position.y += this.dropDistance;
-        } else {
-          alien.position.x += 30 * this.direction;
-        }
+    if (hitEdge) {
+      alive.forEach((alien) => {
+        alien.position.y += ALIEN.STEP_DROP;
       });
-
-      if (hitEdge) {
-        this.direction *= -1;
-        // Increase speed
-        this.currentSpeed = Math.max(
-          this.currentSpeed * ALIEN.SPEED_INCREASE,
-          ALIEN.MIN_MOVE_INTERVAL
-        );
-      }
+      this.direction *= -1;
+    } else {
+      alive.forEach((alien) => {
+        alien.position.x += ALIEN.STEP_X * this.direction;
+      });
     }
+
+    // March sound cadence
+    soundManager.play(SoundType.ALIEN_MOVE);
+    this.marchStepIndex = (this.marchStepIndex + 1) % 4;
+
+    // Interval scales with remaining aliens (fewer aliens -> faster)
+    const ratio = alive.length / (ALIEN.ROWS * ALIEN.COLS);
+    // Map ratio in (0,1] to interval in [MIN_MOVE_INTERVAL, MOVE_INTERVAL]
+    const scaled =
+      ALIEN.MIN_MOVE_INTERVAL +
+      (ALIEN.MOVE_INTERVAL - ALIEN.MIN_MOVE_INTERVAL) * ratio;
+    this.currentInterval = Math.max(
+      ALIEN.MIN_MOVE_INTERVAL,
+      Math.floor(scaled)
+    );
   }
 
   static reset(): void {
     this.direction = 1;
     this.moveTimer = 0;
-    this.currentSpeed = ALIEN.MOVE_INTERVAL;
+    this.currentInterval = ALIEN.MOVE_INTERVAL;
+    this.marchStepIndex = 0;
   }
 }
 

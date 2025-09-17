@@ -22,9 +22,10 @@ export const ALIEN = {
   HORIZONTAL_SPACING: 48,
   VERTICAL_SPACING: 48,
   INITIAL_Y: 100, // Starting Y position
-  MOVE_INTERVAL: 1000, // Initial move speed (ms)
-  SPEED_INCREASE: 0.9, // Multiplier for speed increase as aliens are destroyed
-  MIN_MOVE_INTERVAL: 100, // Fastest possible move speed
+  MOVE_INTERVAL: 1000, // Initial step interval (ms)
+  MIN_MOVE_INTERVAL: 100, // Fastest possible step interval
+  STEP_X: 16, // Pixels moved horizontally per step
+  STEP_DROP: 24, // Pixels moved down when hitting an edge
   POINTS: {
     TOP_ROW: 30, // Points for top row aliens
     MIDDLE_ROW: 20, // Points for middle row aliens
@@ -56,6 +57,10 @@ export const PROJECTILE = {
     HEIGHT: 12,
     COLOR: "#ff0",
   },
+  CAPS: {
+    PLAYER_MAX: 1,
+    ALIEN_MAX: 3,
+  },
 } as const;
 
 export const GAME_STATES = {
@@ -68,4 +73,14 @@ export const GAME_STATES = {
 export const SCORE = {
   EXTRA_LIFE_AT: 10000, // Score needed for extra life
   HIGH_SCORE_KEY: "spaceInvaders_highScore", // localStorage key
+} as const;
+
+export const UFO = {
+  WIDTH: 40,
+  HEIGHT: 20,
+  SPEED: 2.5,
+  Y_POSITION: 60,
+  MIN_SPAWN_MS: 8000,
+  MAX_SPAWN_MS: 20000,
+  SCORES: [50, 100, 150, 300],
 } as const;
