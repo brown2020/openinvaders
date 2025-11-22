@@ -2,7 +2,8 @@ import { Player } from "@/lib/entities/player";
 import { Alien, AlienFormation } from "@/lib/entities/alien";
 import { Barrier } from "@/lib/entities/barrier";
 import { Projectile } from "@/lib/entities/projectile";
-import { GAME_DIMENSIONS, PLAYER, ALIEN, BARRIER } from "@/lib/constants/game";
+import { Ufo } from "@/lib/entities/ufo";
+import { GAME_DIMENSIONS, PLAYER, ALIEN, BARRIER, UFO, PROJECTILE } from "@/lib/constants/game";
 import { soundManager } from "@/lib/sounds/SoundManager";
 import { SoundType } from "@/lib/sounds/SoundTypes";
 
@@ -11,12 +12,16 @@ export class EntityManager {
   aliens: Alien[];
   barriers: Barrier[];
   projectiles: Projectile[];
+  ufo: Ufo | null;
+  nextUfoSpawnTime: number;
 
   constructor() {
     this.player = this.createPlayer();
     this.aliens = this.createAliens();
     this.barriers = this.createBarriers();
     this.projectiles = [];
+    this.ufo = null;
+    this.nextUfoSpawnTime = 0;
   }
 
   private createPlayer(): Player {
@@ -83,7 +88,7 @@ export class EntityManager {
     return barriers;
   }
 
-  update(deltaTime: number): void {
+  update(deltaTime: number, timestamp: number, wave: number): void {
     // Update player
     this.player.update(deltaTime);
 
@@ -91,14 +96,17 @@ export class EntityManager {
     AlienFormation.update(this.aliens, deltaTime);
 
     // Update individual aliens and handle shooting
+    const alienShots = this.projectiles.filter(p => !p.isPlayerProjectile).length;
+    
     this.aliens.forEach((alien) => {
       if (!alien.isDestroyed) {
         alien.update(deltaTime);
 
         // Alien shooting
         if (
-          Math.random() < ALIEN.BASE_SHOOT_CHANCE * (deltaTime / 1000) &&
-          alien.canShoot(this.aliens)
+          Math.random() < (ALIEN.BASE_SHOOT_CHANCE + ALIEN.WAVE_SHOOT_MULTIPLIER * wave) * (deltaTime / 1000) &&
+          alien.canShoot(this.aliens) &&
+          alienShots < PROJECTILE.CAPS.ALIEN_MAX
         ) {
           this.projectiles.push(alien.shoot());
           soundManager.play(SoundType.SHOOT);
@@ -113,6 +121,25 @@ export class EntityManager {
       }
     });
 
+    // Update UFO
+    if (timestamp >= this.nextUfoSpawnTime && !this.ufo) {
+        // Initial spawn time check or respawn
+        if (this.nextUfoSpawnTime === 0) {
+             this.nextUfoSpawnTime = timestamp + (UFO.MIN_SPAWN_MS + Math.random() * (UFO.MAX_SPAWN_MS - UFO.MIN_SPAWN_MS));
+        } else {
+            const fromLeft = Math.random() < 0.5;
+            this.ufo = new Ufo({ fromLeft });
+        }
+    }
+
+    if (this.ufo) {
+      this.ufo.update(deltaTime);
+      if (!this.ufo.isActive) {
+        this.ufo = null;
+        this.nextUfoSpawnTime = timestamp + (UFO.MIN_SPAWN_MS + Math.random() * (UFO.MAX_SPAWN_MS - UFO.MIN_SPAWN_MS));
+      }
+    }
+
     // Update projectiles
     this.projectiles = this.projectiles.filter((projectile) => {
       projectile.update(deltaTime);
@@ -124,11 +151,15 @@ export class EntityManager {
     });
   }
 
-  reset(): void {
-    this.player = this.createPlayer();
+  reset(fullReset: boolean = false): void {
+    if (fullReset) {
+         this.barriers = this.createBarriers();
+    }
+    this.player = this.createPlayer(); // Always reset player position
     this.aliens = this.createAliens();
-    this.barriers = this.createBarriers();
     this.projectiles = [];
+    this.ufo = null;
+    this.nextUfoSpawnTime = performance.now() + (UFO.MIN_SPAWN_MS + Math.random() * (UFO.MAX_SPAWN_MS - UFO.MIN_SPAWN_MS));
     AlienFormation.reset();
   }
 
