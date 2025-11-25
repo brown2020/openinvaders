@@ -1,11 +1,87 @@
 // src/lib/entities/alien.ts
-import { Entity, EntityConfig, Position } from "./entity";
-import { ALIEN, PROJECTILE, GAME_DIMENSIONS } from "@/lib/constants/game";
-import { Projectile, ProjectileConfig } from "./projectile";
-import { soundManager } from "@/lib/sounds/SoundManager";
-import { SoundType } from "@/lib/sounds/SoundTypes";
 
-export type AlienType = "TOP" | "MIDDLE" | "BOTTOM";
+import { Entity, EntityConfig, Position } from './entity';
+import { ALIEN, PROJECTILE, GAME_DIMENSIONS } from '@/lib/constants/game';
+import { Projectile, ProjectileConfig } from './projectile';
+import { soundManager } from '@/lib/sounds/SoundManager';
+import { SoundType } from '@/lib/sounds/SoundTypes';
+import { RenderLayer, GAME_COLORS, AlienType } from '@/types/game';
+
+// Pixel art patterns for different alien types (12x8 grid)
+const ALIEN_PIXELS = {
+  TOP: [
+    [
+      '    ####    ',
+      '  ########  ',
+      ' ########## ',
+      ' ##  ##  ## ',
+      ' ########## ',
+      '   ##  ##   ',
+      '  ##    ##  ',
+      ' ##      ## ',
+    ],
+    [
+      '    ####    ',
+      '  ########  ',
+      ' ########## ',
+      ' ##  ##  ## ',
+      ' ########## ',
+      '  ##    ##  ',
+      '   ##  ##   ',
+      '    ####    ',
+    ],
+  ],
+  MIDDLE: [
+    [
+      '  #      #  ',
+      '   #    #   ',
+      '  ########  ',
+      ' ## #### ## ',
+      '############',
+      '# ######## #',
+      '# #      # #',
+      '   ##  ##   ',
+    ],
+    [
+      '  #      #  ',
+      '#  #    #  #',
+      '# ######## #',
+      '### #### ###',
+      '############',
+      ' ########## ',
+      '  #      #  ',
+      ' #        # ',
+    ],
+  ],
+  BOTTOM: [
+    [
+      '   ######   ',
+      ' ########## ',
+      '############',
+      '###  ##  ###',
+      '############',
+      '  ###  ###  ',
+      ' ##  ##  ## ',
+      '##        ##',
+    ],
+    [
+      '   ######   ',
+      ' ########## ',
+      '############',
+      '###  ##  ###',
+      '############',
+      '   ##  ##   ',
+      '  ##    ##  ',
+      '   #    #   ',
+    ],
+  ],
+};
+
+const ALIEN_COLORS: Record<AlienType, string> = {
+  TOP: GAME_COLORS.ALIEN_TOP,
+  MIDDLE: GAME_COLORS.ALIEN_MIDDLE,
+  BOTTOM: GAME_COLORS.ALIEN_BOTTOM,
+};
 
 export interface AlienConfig extends EntityConfig {
   type: AlienType;
@@ -14,8 +90,11 @@ export interface AlienConfig extends EntityConfig {
   formationPosition: Position;
 }
 
+/**
+ * Manages the alien formation movement
+ */
 export class AlienFormation {
-  private static direction: number = 1; // 1 for right, -1 for left
+  private static direction: number = 1;
   private static moveTimer: number = 0;
   private static currentInterval: number = ALIEN.MOVE_INTERVAL;
   private static marchStepIndex: number = 0;
@@ -50,13 +129,12 @@ export class AlienFormation {
       });
     }
 
-    // March sound cadence
+    // March sound
     soundManager.play(SoundType.ALIEN_MOVE);
     this.marchStepIndex = (this.marchStepIndex + 1) % 4;
 
-    // Interval scales with remaining aliens (fewer aliens -> faster)
+    // Speed up as aliens are destroyed
     const ratio = alive.length / (ALIEN.ROWS * ALIEN.COLS);
-    // Map ratio in (0,1] to interval in [MIN_MOVE_INTERVAL, MOVE_INTERVAL]
     const scaled =
       ALIEN.MIN_MOVE_INTERVAL +
       (ALIEN.MOVE_INTERVAL - ALIEN.MIN_MOVE_INTERVAL) * ratio;
@@ -83,95 +161,129 @@ export class Alien extends Entity {
   animationFrame: number;
   private animationTimer: number;
   private readonly animationDuration: number;
+  private hoverOffset: number = 0;
+  private hoverPhase: number;
 
   constructor(config: AlienConfig) {
     super(config);
     this.type = config.type;
     this.row = config.row;
     this.column = config.column;
-    this.formationPosition = config.formationPosition;
+    this.formationPosition = { ...config.formationPosition };
     this.points = this.getPoints();
     this.animationFrame = 0;
     this.animationTimer = 0;
     this.animationDuration = 500;
+    this.hoverPhase = Math.random() * Math.PI * 2;
+    this.renderLayer = RenderLayer.ALIENS;
   }
 
   private getPoints(): number {
     switch (this.type) {
-      case "TOP":
+      case 'TOP':
         return ALIEN.POINTS.TOP_ROW;
-      case "MIDDLE":
+      case 'MIDDLE':
         return ALIEN.POINTS.MIDDLE_ROW;
-      case "BOTTOM":
+      case 'BOTTOM':
         return ALIEN.POINTS.BOTTOM_ROW;
     }
   }
 
   update(deltaTime: number): void {
-    // Update animation
+    // Update animation frame
     this.animationTimer += deltaTime;
     if (this.animationTimer >= this.animationDuration) {
       this.animationFrame = (this.animationFrame + 1) % 2;
       this.animationTimer = 0;
     }
+
+    // Update hover effect
+    this.hoverPhase += deltaTime * 0.003;
+    this.hoverOffset = Math.sin(this.hoverPhase) * 2;
   }
 
   render(ctx: CanvasRenderingContext2D): void {
-    if (this.sprite && !this.isDestroyed) {
-      // Draw from sprite sheet based on alien type and animation frame
-      const typeOffset = this.getTypeOffset();
-      ctx.drawImage(
-        this.sprite,
-        this.animationFrame * this.dimensions.width,
-        typeOffset,
-        this.dimensions.width,
-        this.dimensions.height,
-        this.position.x,
-        this.position.y,
-        this.dimensions.width,
-        this.dimensions.height
-      );
-    } else {
-      // Fallback rendering
-      ctx.fillStyle = this.getColorByType();
-      ctx.fillRect(
-        this.position.x,
-        this.position.y,
-        this.dimensions.width,
-        this.dimensions.height
-      );
-    }
+    if (this.isDestroyed) return;
+
+    const color = ALIEN_COLORS[this.type];
+    const centerX = this.position.x + this.dimensions.width / 2;
+    const centerY = this.position.y + this.dimensions.height / 2 + this.hoverOffset;
+
+    ctx.save();
+
+    // Draw glow
+    const glowGradient = ctx.createRadialGradient(
+      centerX, centerY, 0,
+      centerX, centerY, this.dimensions.width * 0.8
+    );
+    glowGradient.addColorStop(0, `${color}44`);
+    glowGradient.addColorStop(0.5, `${color}22`);
+    glowGradient.addColorStop(1, 'transparent');
+    
+    ctx.fillStyle = glowGradient;
+    ctx.fillRect(
+      this.position.x - 10,
+      this.position.y - 10 + this.hoverOffset,
+      this.dimensions.width + 20,
+      this.dimensions.height + 20
+    );
+
+    // Draw pixel art alien
+    this.renderPixelAlien(ctx, color);
+
+    // Draw eyes glow
+    this.renderEyes(ctx);
+
+    ctx.restore();
   }
 
-  private getTypeOffset(): number {
-    switch (this.type) {
-      case "TOP":
-        return 0;
-      case "MIDDLE":
-        return this.dimensions.height;
-      case "BOTTOM":
-        return this.dimensions.height * 2;
+  private renderPixelAlien(ctx: CanvasRenderingContext2D, color: string): void {
+    const pixels = ALIEN_PIXELS[this.type][this.animationFrame];
+    const pixelSize = 2.5;
+    const startX = this.position.x + (this.dimensions.width - 12 * pixelSize) / 2;
+    const startY = this.position.y + (this.dimensions.height - 8 * pixelSize) / 2 + this.hoverOffset;
+
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 6;
+
+    for (let row = 0; row < pixels.length; row++) {
+      for (let col = 0; col < pixels[row].length; col++) {
+        if (pixels[row][col] === '#') {
+          ctx.fillRect(
+            startX + col * pixelSize,
+            startY + row * pixelSize,
+            pixelSize,
+            pixelSize
+          );
+        }
+      }
     }
+
+    ctx.shadowBlur = 0;
   }
 
-  private getColorByType(): string {
-    switch (this.type) {
-      case "TOP":
-        return "#ff0000";
-      case "MIDDLE":
-        return "#ff7f00";
-      case "BOTTOM":
-        return "#ffff00";
-    }
+  private renderEyes(ctx: CanvasRenderingContext2D): void {
+    const eyeOffset = this.type === 'TOP' ? 2 : (this.type === 'MIDDLE' ? 3 : 2);
+    const eyeY = this.position.y + 6 * 2.5 + this.hoverOffset;
+    const leftEyeX = this.position.x + this.dimensions.width / 2 - 5;
+    const rightEyeX = this.position.x + this.dimensions.width / 2 + 5;
+
+    // Glowing eyes
+    ctx.beginPath();
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = '#ffffff';
+    ctx.shadowBlur = 4;
+    ctx.arc(leftEyeX, eyeY, 2, 0, Math.PI * 2);
+    ctx.arc(rightEyeX, eyeY, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
   }
 
   shoot(): Projectile {
     const projectileConfig: ProjectileConfig = {
       position: {
-        x:
-          this.position.x +
-          this.dimensions.width / 2 -
-          PROJECTILE.ALIEN.WIDTH / 2,
+        x: this.position.x + this.dimensions.width / 2 - PROJECTILE.ALIEN.WIDTH / 2,
         y: this.position.y + this.dimensions.height,
       },
       dimensions: {
@@ -187,6 +299,7 @@ export class Alien extends Entity {
   canShoot(aliens: Alien[]): boolean {
     const myCenter = this.position.x + this.dimensions.width / 2;
 
+    // Check if any alien is below this one in the same column
     return !aliens.some(
       (alien) =>
         alien !== this &&
@@ -197,3 +310,6 @@ export class Alien extends Entity {
     );
   }
 }
+
+// Re-export AlienType from types
+export type { AlienType };

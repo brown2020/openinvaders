@@ -1,7 +1,8 @@
 // src/components/game/GameControls.tsx
-import React, { useCallback, useEffect, useState, memo } from "react";
-import { Button } from "@/components/ui/button";
-import { GAME_STATES } from "@/lib/constants/game";
+
+import React, { useCallback, useEffect, useState, memo } from 'react';
+import { Button } from '@/components/ui/button';
+import { GAME_STATES } from '@/lib/constants/game';
 import {
   Volume2,
   VolumeX,
@@ -9,7 +10,10 @@ import {
   Play,
   RotateCcw,
   HelpCircle,
-} from "lucide-react";
+  ChevronLeft,
+  ChevronRight,
+  Crosshair,
+} from 'lucide-react';
 
 interface GameControlsProps {
   gameState: keyof typeof GAME_STATES;
@@ -22,260 +26,245 @@ interface GameControlsProps {
   onMoveRight: (isMoving: boolean) => void;
   onShoot: () => void;
   isSoundEnabled: boolean;
-  score: number;
-  highScore: number;
-  lives: number;
 }
 
-const GameControls = memo<GameControlsProps>(
-  ({
-    gameState,
-    onPause,
-    onResume,
-    onRestart,
-    onToggleSound,
-    onShowHelp,
-    onMoveLeft,
-    onMoveRight,
-    onShoot,
-    isSoundEnabled,
-    score,
-    highScore,
-    lives,
-  }) => {
-    const isPlaying = gameState === GAME_STATES.PLAYING;
-    const isPaused = gameState === GAME_STATES.PAUSED;
-    const [isTouchDevice, setIsTouchDevice] = useState(false);
+const GameControls = memo<GameControlsProps>(({
+  gameState,
+  onPause,
+  onResume,
+  onRestart,
+  onToggleSound,
+  onShowHelp,
+  onMoveLeft,
+  onMoveRight,
+  onShoot,
+  isSoundEnabled,
+}) => {
+  const isPlaying = gameState === GAME_STATES.PLAYING;
+  const isPaused = gameState === GAME_STATES.PAUSED;
+  const isMenu = gameState === GAME_STATES.MENU;
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
 
-    useEffect(() => {
-      setIsTouchDevice("ontouchstart" in window);
-    }, []);
+  useEffect(() => {
+    setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  }, []);
 
-    // Keyboard controls
-    useEffect(() => {
-      const handleKeyDown = (event: KeyboardEvent) => {
-        if (event.repeat) return; // Prevent key repeat
+  // Keyboard controls
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.repeat) return;
 
-        switch (event.key) {
-          case "ArrowLeft":
-          case "a":
-            event.preventDefault();
-            onMoveLeft(true);
-            break;
-          case "ArrowRight":
-          case "d":
-            event.preventDefault();
-            onMoveRight(true);
-            break;
-          case " ":
-            event.preventDefault();
-            if (isPlaying) {
-              onShoot();
-            }
-            break;
-          case "p":
-            event.preventDefault();
-            if (isPlaying) {
-              onPause();
+      switch (event.key) {
+        case 'ArrowLeft':
+        case 'a':
+        case 'A':
+          event.preventDefault();
+          onMoveLeft(true);
+          break;
+        case 'ArrowRight':
+        case 'd':
+        case 'D':
+          event.preventDefault();
+          onMoveRight(true);
+          break;
+        case ' ':
+          event.preventDefault();
+          if (isPlaying) {
+            onShoot();
+          } else if (isMenu || isPaused || gameState === GAME_STATES.GAME_OVER) {
+            // Space starts/restarts/resumes game
+            if (isMenu) {
+              onRestart();
             } else if (isPaused) {
               onResume();
+            } else {
+              onRestart();
             }
-            break;
-          case "r":
-            event.preventDefault();
-            onRestart();
-            break;
-        }
-      };
+          }
+          break;
+        case 'p':
+        case 'P':
+          event.preventDefault();
+          if (isPlaying) {
+            onPause();
+          } else if (isPaused) {
+            onResume();
+          }
+          break;
+        case 'r':
+        case 'R':
+          event.preventDefault();
+          onRestart();
+          break;
+        case 'Escape':
+          event.preventDefault();
+          if (isPlaying) {
+            onPause();
+          }
+          break;
+      }
+    };
 
-      const handleKeyUp = (event: KeyboardEvent) => {
-        switch (event.key) {
-          case "ArrowLeft":
-          case "a":
-            event.preventDefault();
-            onMoveLeft(false);
-            break;
-          case "ArrowRight":
-          case "d":
-            event.preventDefault();
-            onMoveRight(false);
-            break;
-        }
-      };
+    const handleKeyUp = (event: KeyboardEvent) => {
+      switch (event.key) {
+        case 'ArrowLeft':
+        case 'a':
+        case 'A':
+          event.preventDefault();
+          onMoveLeft(false);
+          break;
+        case 'ArrowRight':
+        case 'd':
+        case 'D':
+          event.preventDefault();
+          onMoveRight(false);
+          break;
+      }
+    };
 
-      window.addEventListener("keydown", handleKeyDown);
-      window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
 
-      return () => {
-        window.removeEventListener("keydown", handleKeyDown);
-        window.removeEventListener("keyup", handleKeyUp);
-      };
-    }, [
-      isPlaying,
-      isPaused,
-      onMoveLeft,
-      onMoveRight,
-      onShoot,
-      onPause,
-      onResume,
-      onRestart,
-    ]);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [isPlaying, isPaused, isMenu, gameState, onMoveLeft, onMoveRight, onShoot, onPause, onResume, onRestart]);
 
-    // Touch/mouse controls
-    const handleTouchStart = useCallback(
-      (action: "left" | "right" | "shoot") => {
-        if (!isPlaying) return;
+  // Touch handlers
+  const handleTouchStart = useCallback(
+    (action: 'left' | 'right' | 'shoot') => {
+      if (!isPlaying) return;
+      switch (action) {
+        case 'left':
+          onMoveLeft(true);
+          break;
+        case 'right':
+          onMoveRight(true);
+          break;
+        case 'shoot':
+          onShoot();
+          break;
+      }
+    },
+    [isPlaying, onMoveLeft, onMoveRight, onShoot]
+  );
 
-        switch (action) {
-          case "left":
-            onMoveLeft(true);
-            break;
-          case "right":
-            onMoveRight(true);
-            break;
-          case "shoot":
-            onShoot();
-            break;
-        }
-      },
-      [isPlaying, onMoveLeft, onMoveRight, onShoot]
-    );
+  const handleTouchEnd = useCallback(
+    (action: 'left' | 'right') => {
+      switch (action) {
+        case 'left':
+          onMoveLeft(false);
+          break;
+        case 'right':
+          onMoveRight(false);
+          break;
+      }
+    },
+    [onMoveLeft, onMoveRight]
+  );
 
-    const handleTouchEnd = useCallback(
-      (action: "left" | "right") => {
-        switch (action) {
-          case "left":
-            onMoveLeft(false);
-            break;
-          case "right":
-            onMoveRight(false);
-            break;
-        }
-      },
-      [onMoveLeft, onMoveRight]
-    );
-
-    return (
-      <div className="w-full max-w-3xl">
-        {/* Score Display */}
-        <div className="mb-4 p-4 border border-green-500 rounded-lg bg-black/50">
-          <div className="grid grid-cols-3 gap-4 text-green-500 pixel-font text-sm md:text-base">
-            <div className="text-left">SCORE: {score}</div>
-            <div className="text-center">HIGH: {highScore}</div>
-            <div className="text-right">LIVES: {lives}</div>
-          </div>
-        </div>
-
-        {/* Game Controls */}
-        <div className="flex justify-between items-center gap-2 mb-4">
-          <div className="flex gap-2">
-            {/* Pause/Resume Button */}
-            {(isPlaying || isPaused) && (
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={isPaused ? onResume : onPause}
-                className="w-10 h-10 border-green-500 hover:bg-green-500/20"
-              >
-                {isPaused ? (
-                  <Play className="h-4 w-4 text-green-500" />
-                ) : (
-                  <Pause className="h-4 w-4 text-green-500" />
-                )}
-              </Button>
-            )}
-
-            {/* Restart Button */}
+  return (
+    <div className="w-full max-w-[800px] mt-3">
+      {/* Control buttons */}
+      <div className="flex justify-between items-center gap-2 mb-3 px-2">
+        <div className="flex gap-2">
+          {/* Pause/Resume */}
+          {(isPlaying || isPaused) && (
             <Button
               variant="outline"
               size="icon"
-              onClick={onRestart}
-              className="w-10 h-10 border-green-500 hover:bg-green-500/20"
+              onClick={isPaused ? onResume : onPause}
+              className="w-10 h-10 bg-slate-900/60 border-cyan-500/30 hover:bg-cyan-500/20 hover:border-cyan-500/50 transition-all"
             >
-              <RotateCcw className="h-4 w-4 text-green-500" />
-            </Button>
-
-            {/* Sound Toggle Button */}
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={onToggleSound}
-              className="w-10 h-10 border-green-500 hover:bg-green-500/20"
-            >
-              {isSoundEnabled ? (
-                <Volume2 className="h-4 w-4 text-green-500" />
+              {isPaused ? (
+                <Play className="h-4 w-4 text-cyan-400" />
               ) : (
-                <VolumeX className="h-4 w-4 text-green-500" />
+                <Pause className="h-4 w-4 text-cyan-400" />
               )}
             </Button>
-          </div>
+          )}
 
-          {/* Help Button */}
+          {/* Restart */}
           <Button
             variant="outline"
             size="icon"
-            onClick={onShowHelp}
-            className="w-10 h-10 border-green-500 hover:bg-green-500/20"
+            onClick={onRestart}
+            className="w-10 h-10 bg-slate-900/60 border-cyan-500/30 hover:bg-cyan-500/20 hover:border-cyan-500/50 transition-all"
           >
-            <HelpCircle className="h-4 w-4 text-green-500" />
+            <RotateCcw className="h-4 w-4 text-cyan-400" />
+          </Button>
+
+          {/* Sound toggle */}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onToggleSound}
+            className="w-10 h-10 bg-slate-900/60 border-cyan-500/30 hover:bg-cyan-500/20 hover:border-cyan-500/50 transition-all"
+          >
+            {isSoundEnabled ? (
+              <Volume2 className="h-4 w-4 text-cyan-400" />
+            ) : (
+              <VolumeX className="h-4 w-4 text-slate-500" />
+            )}
           </Button>
         </div>
 
-        {/* Mobile Touch Controls */}
-        {isTouchDevice && isPlaying && (
-          <div className="grid grid-cols-3 gap-4 mt-4">
-            {/* Left Button */}
-            <Button
-              variant="outline"
-              className="h-16 border-green-500 hover:bg-green-500/20 pixel-font active:bg-green-500/40"
-              onTouchStart={() => handleTouchStart("left")}
-              onTouchEnd={() => handleTouchEnd("left")}
-              onMouseDown={() => handleTouchStart("left")}
-              onMouseUp={() => handleTouchEnd("left")}
-              onMouseLeave={() => handleTouchEnd("left")}
-              onContextMenu={(e) => e.preventDefault()}
-            >
-              ←
-            </Button>
-
-            {/* Fire Button */}
-            <Button
-              variant="outline"
-              className="h-16 border-green-500 hover:bg-green-500/20 pixel-font active:bg-green-500/40"
-              onTouchStart={() => handleTouchStart("shoot")}
-              onMouseDown={() => handleTouchStart("shoot")}
-              onContextMenu={(e) => e.preventDefault()}
-            >
-              FIRE
-            </Button>
-
-            {/* Right Button */}
-            <Button
-              variant="outline"
-              className="h-16 border-green-500 hover:bg-green-500/20 pixel-font active:bg-green-500/40"
-              onTouchStart={() => handleTouchStart("right")}
-              onTouchEnd={() => handleTouchEnd("right")}
-              onMouseDown={() => handleTouchStart("right")}
-              onMouseUp={() => handleTouchEnd("right")}
-              onMouseLeave={() => handleTouchEnd("right")}
-              onContextMenu={(e) => e.preventDefault()}
-            >
-              →
-            </Button>
-          </div>
-        )}
-
-        {/* Keyboard Controls Info */}
-        {!isTouchDevice && (
-          <div className="mt-4 text-xs text-green-500/70 pixel-font text-center">
-            <p>ARROWS or A/D: Move • SPACE: Fire • P: Pause • R: Restart</p>
-          </div>
-        )}
+        {/* Help button */}
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={onShowHelp}
+          className="w-10 h-10 bg-slate-900/60 border-cyan-500/30 hover:bg-cyan-500/20 hover:border-cyan-500/50 transition-all"
+        >
+          <HelpCircle className="h-4 w-4 text-cyan-400" />
+        </Button>
       </div>
-    );
-  }
-);
 
-GameControls.displayName = "GameControls";
+      {/* Mobile touch controls */}
+      {isTouchDevice && isPlaying && (
+        <div className="grid grid-cols-3 gap-3 px-2">
+          <Button
+            variant="outline"
+            className="h-16 bg-slate-900/80 border-cyan-500/30 hover:bg-cyan-500/20 active:bg-cyan-500/40 transition-all"
+            onTouchStart={() => handleTouchStart('left')}
+            onTouchEnd={() => handleTouchEnd('left')}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            <ChevronLeft className="w-8 h-8 text-cyan-400" />
+          </Button>
+
+          <Button
+            variant="outline"
+            className="h-16 bg-gradient-to-b from-red-900/80 to-red-950/80 border-red-500/30 hover:bg-red-500/20 active:bg-red-500/40 transition-all"
+            onTouchStart={() => handleTouchStart('shoot')}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            <Crosshair className="w-8 h-8 text-red-400" />
+          </Button>
+
+          <Button
+            variant="outline"
+            className="h-16 bg-slate-900/80 border-cyan-500/30 hover:bg-cyan-500/20 active:bg-cyan-500/40 transition-all"
+            onTouchStart={() => handleTouchStart('right')}
+            onTouchEnd={() => handleTouchEnd('right')}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            <ChevronRight className="w-8 h-8 text-cyan-400" />
+          </Button>
+        </div>
+      )}
+
+      {/* Desktop controls hint */}
+      {!isTouchDevice && (
+        <div className="text-center text-xs text-cyan-500/50 pixel-font px-2">
+          ← → MOVE • SPACE FIRE • P PAUSE • R RESTART
+        </div>
+      )}
+    </div>
+  );
+});
+
+GameControls.displayName = 'GameControls';
 
 export default GameControls;

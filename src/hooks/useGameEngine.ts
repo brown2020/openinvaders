@@ -1,4 +1,6 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+// src/hooks/useGameEngine.ts
+
+import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { EntityManager } from '@/lib/game/EntityManager';
 import { CollisionManager } from '@/lib/game/CollisionManager';
 import { useGameStore } from '@/lib/store/game-store';
@@ -6,60 +8,173 @@ import { soundManager } from '@/lib/sounds/SoundManager';
 import { SoundType } from '@/lib/sounds/SoundTypes';
 import { Entity } from '@/lib/entities/entity';
 import { PROJECTILE } from '@/lib/constants/game';
+import { ParticleSystem, Starfield, ScreenShake, CRTEffect } from '@/lib/effects';
+import { ScoreNotification, CollisionEvent, GAME_COLORS } from '@/types/game';
 
+interface GameEngineState {
+  entities: Entity[];
+  entitiesVersion: number;
+  notifications: ScoreNotification[];
+  particleSystem: ParticleSystem;
+  starfield: Starfield;
+  screenShake: ScreenShake;
+  crtEffect: CRTEffect;
+}
+
+/**
+ * Core game engine hook that manages game state, updates, and rendering
+ */
 export const useGameEngine = () => {
   const {
     status,
     wave,
     incrementScore,
-    setHighScore,
     setStatus,
-    decrementLives,
     setLives,
-    score,
-    highScore,
     incrementWave,
   } = useGameStore();
 
+  // Game systems refs
   const entityManagerRef = useRef<EntityManager>(new EntityManager());
   const collisionManagerRef = useRef<CollisionManager>(new CollisionManager());
   const lastTimeRef = useRef<number>(0);
   const animationFrameRef = useRef<number>(0);
-  
-  // Version to force re-renders when entity list structure changes (add/remove)
+
+  // Visual effects systems
+  const particleSystemRef = useRef<ParticleSystem>(new ParticleSystem());
+  const starfieldRef = useRef<Starfield>(new Starfield());
+  const screenShakeRef = useRef<ScreenShake>(new ScreenShake());
+  const crtEffectRef = useRef<CRTEffect>(new CRTEffect());
+
+  // Entity version for triggering re-renders
   const [entitiesVersion, setEntitiesVersion] = useState(0);
   const bumpVersion = useCallback(() => setEntitiesVersion((v) => v + 1), []);
 
-  // Events/Notifications queue (for UI overlays like "+100")
-  const [notifications, setNotifications] = useState<{ id: number; score: number; position: { x: number; y: number } }[]>([]);
+  // Score notifications for floating score popups
+  const [notifications, setNotifications] = useState<ScoreNotification[]>([]);
   const notificationIdRef = useRef(0);
 
+  /**
+   * Add a score notification popup
+   */
   const addNotification = useCallback((points: number, x: number, y: number) => {
     const id = notificationIdRef.current++;
-    setNotifications((prev) => [...prev, { id, score: points, position: { x, y } }]);
+    const notification: ScoreNotification = {
+      id,
+      score: points,
+      position: { x, y },
+      timestamp: performance.now(),
+    };
+    
+    setNotifications((prev) => [...prev, notification]);
+    
+    // Remove notification after animation
     setTimeout(() => {
       setNotifications((prev) => prev.filter((n) => n.id !== id));
     }, 1000);
   }, []);
 
+  /**
+   * Handle collision events
+   */
+  const handleCollisionEvents = useCallback((events: CollisionEvent[]) => {
+    let needsBump = false;
+
+    events.forEach((event) => {
+      switch (event.type) {
+        case 'ALIEN_KILLED':
+          incrementScore(event.points!);
+          addNotification(event.points!, event.position!.x, event.position!.y);
+          
+          // Create explosion particles
+          const alienColor = event.payload?.alienType === 'TOP' 
+            ? GAME_COLORS.ALIEN_TOP 
+            : event.payload?.alienType === 'MIDDLE' 
+              ? GAME_COLORS.ALIEN_MIDDLE 
+              : GAME_COLORS.ALIEN_BOTTOM;
+          particleSystemRef.current.createExplosion(event.position!, alienColor);
+          
+          // Small screen shake
+          screenShakeRef.current.trigger(3, 100);
+          needsBump = true;
+          break;
+
+        case 'UFO_KILLED':
+          incrementScore(event.points!);
+          addNotification(event.points!, event.position!.x, event.position!.y);
+          
+          // Big explosion for UFO
+          particleSystemRef.current.createExplosion(event.position!, GAME_COLORS.UFO, 24);
+          screenShakeRef.current.trigger(8, 200);
+          needsBump = true;
+          break;
+
+        case 'PLAYER_HIT':
+          setLives(event.payload!.lives as number);
+          
+          // Create hit particles
+          if (event.position) {
+            particleSystemRef.current.createSparkBurst(event.position, GAME_COLORS.PLAYER, 16);
+          }
+          screenShakeRef.current.trigger(10, 300);
+          break;
+
+        case 'GAME_OVER':
+          setStatus('GAME_OVER');
+          break;
+
+        case 'BARRIER_HIT':
+          if (event.position) {
+            particleSystemRef.current.createDebris(event.position, 4);
+          }
+          if (event.payload?.destroyed) {
+            needsBump = true;
+          }
+          break;
+
+        case 'ALIEN_LANDED':
+          // Handled by GAME_OVER
+          break;
+      }
+    });
+
+    return needsBump;
+  }, [incrementScore, setLives, setStatus, addNotification]);
+
+  /**
+   * Reset the game
+   */
   const resetGame = useCallback((fullReset = false) => {
     entityManagerRef.current.reset(fullReset);
+    particleSystemRef.current.clear();
+    screenShakeRef.current.reset();
+    starfieldRef.current.reset();
     lastTimeRef.current = 0;
     bumpVersion();
   }, [bumpVersion]);
 
+  /**
+   * Main game update loop
+   */
   const update = useCallback((timestamp: number) => {
     if (status !== 'PLAYING') return;
 
-    const deltaTime = lastTimeRef.current ? Math.min(timestamp - lastTimeRef.current, 32) : 16;
+    // Calculate delta time with frame rate cap
+    const deltaTime = lastTimeRef.current 
+      ? Math.min(timestamp - lastTimeRef.current, 32) 
+      : 16;
     lastTimeRef.current = timestamp;
 
     const entityManager = entityManagerRef.current;
-    
-    // Update Entities
+
+    // Update visual effects
+    starfieldRef.current.update(deltaTime);
+    particleSystemRef.current.update(deltaTime);
+
+    // Update entities
     entityManager.update(deltaTime, timestamp, wave);
 
-    // Check Collisions
+    // Check collisions
     const events = collisionManagerRef.current.checkCollisions(
       entityManager.player,
       entityManager.aliens,
@@ -68,109 +183,57 @@ export const useGameEngine = () => {
       entityManager.ufo
     );
 
-    let needsBump = false;
+    // Handle events
+    let needsBump: boolean = handleCollisionEvents(events);
 
-    events.forEach((event) => {
-      switch (event.type) {
-        case 'ALIEN_KILLED':
-          incrementScore(event.points!);
-          addNotification(event.points!, event.position!.x, event.position!.y);
-          needsBump = true; // Alien removed
-          break;
-        case 'UFO_KILLED':
-          incrementScore(event.points!);
-          addNotification(event.points!, event.position!.x, event.position!.y);
-          needsBump = true; // UFO removed
-          break;
-        case 'PLAYER_HIT':
-          setLives(event.payload.lives);
-          // needsBump might not be needed unless player sprite changes or respawns logic
-          break;
-        case 'GAME_OVER':
-          setStatus('GAME_OVER');
-          break;
-        case 'BARRIER_HIT':
-          // Barrier damaged, usually visual update handled by render, but if destroyed:
-          if (event.payload.barrier.isDestroyed) needsBump = true;
-          break;
-        case 'ALIEN_LANDED':
-             // Handled by GAME_OVER
-            break;
-      }
-    });
-
-    // Check Win Condition
-    if (entityManager.aliens.every(a => a.isDestroyed)) {
-        incrementWave();
-        resetGame(false); // Reset entities but keep score/lives
-        // status is still PLAYING
-        needsBump = true;
+    // Check win condition
+    if (entityManager.areAllAliensDestroyed()) {
+      incrementWave();
+      resetGame(false);
+      needsBump = true;
     }
 
-    // Check if new projectiles/UFOs appeared/disappeared (simplistic check or just rely on events)
-    // For now, we bump if events happened or if we want to be safe about projectiles (which are added frequently)
-    // Projectiles are added/removed often. Bumping every frame is too expensive?
-    // GameCanvas renders entities. If the array reference changes, it re-renders.
-    // If we only pass a NEW array when structure changes, we save React renders.
-    // But GameCanvas needs the entities array to iterate.
-    // Since GameCanvas has its own loop, we only need to pass a new array if the LIST of entities changed.
-    
-    // We can just bump periodically or check lengths.
-    // Simplest: bump if projectile count changed or UFO changed.
-    // Optimization: Just expose the entityManager and let GameCanvas read from it?
-    // But GameCanvas props is `entities: Entity[]`.
-    
-    // Let's rely on `needsBump` and maybe projectile count check.
-    // Actually, `Game.tsx` bumped on shoot.
-    // Let's bump if projectiles count changed.
-    // But we don't have previous count here easily without ref.
-    
-    // For smoothness, maybe we just bump every few frames or on specific actions?
-    // Let's stick to event-based bumping + shooting.
-    
-    // Shooting isn't an event returned by CollisionManager.
-    // We need to know if shots were fired.
-    // EntityManager creates shots.
-    // Maybe EntityManager can return "events" too?
-    
-    // For now, let's bump if `events.length > 0`.
-    // And what about shooting?
-    // We can verify projectile count or just bump.
-    if (events.length > 0) needsBump = true;
-    
-    // Check if UFO spawned/despawned
-    if (entityManager.ufo !== null !== (entityManagerRef.current as any)._lastUfoExists) {
-         needsBump = true;
-         (entityManagerRef.current as any)._lastUfoExists = entityManager.ufo !== null;
+    // Bump version if needed to trigger re-render
+    if (needsBump || events.length > 0) {
+      bumpVersion();
     }
-    
-    if (needsBump) bumpVersion();
-    
-    // Loop
+
+    // Continue loop
     animationFrameRef.current = requestAnimationFrame(update);
-  }, [status, wave, incrementScore, setLives, setStatus, incrementWave, resetGame, addNotification, bumpVersion]);
+  }, [status, wave, handleCollisionEvents, incrementWave, resetGame, bumpVersion]);
 
-  // Player Actions
+  /**
+   * Move player
+   */
   const movePlayer = useCallback((direction: 'left' | 'right', isMoving: boolean) => {
-    if (direction === 'left') entityManagerRef.current.player.isMovingLeft = isMoving;
-    if (direction === 'right') entityManagerRef.current.player.isMovingRight = isMoving;
+    if (direction === 'left') {
+      entityManagerRef.current.player.isMovingLeft = isMoving;
+    }
+    if (direction === 'right') {
+      entityManagerRef.current.player.isMovingRight = isMoving;
+    }
   }, []);
 
+  /**
+   * Shoot projectile
+   */
   const shoot = useCallback(() => {
     if (status !== 'PLAYING') return;
+
     const em = entityManagerRef.current;
     const playerShots = em.projectiles.filter(p => p.isPlayerProjectile).length;
+
     if (playerShots < PROJECTILE.CAPS.PLAYER_MAX) {
-       const projectile = em.player.shoot();
-       if (projectile) {
-           em.addProjectile(projectile);
-           soundManager.play(SoundType.SHOOT);
-           bumpVersion();
-       }
+      const projectile = em.player.shoot();
+      if (projectile) {
+        em.addProjectile(projectile);
+        soundManager.play(SoundType.SHOOT);
+        bumpVersion();
+      }
     }
   }, [status, bumpVersion]);
 
-  // Start/Stop Loop
+  // Start/stop game loop based on status
   useEffect(() => {
     if (status === 'PLAYING') {
       lastTimeRef.current = 0;
@@ -179,25 +242,28 @@ export const useGameEngine = () => {
     return () => cancelAnimationFrame(animationFrameRef.current);
   }, [status, update]);
 
-  // Return values
+  /**
+   * Get all entities for rendering
+   */
   const getEntities = useCallback(() => {
-      const em = entityManagerRef.current;
-      return [
-          ...em.aliens,
-          ...em.projectiles,
-          ...em.barriers,
-          ...(em.ufo ? [em.ufo] : []),
-          em.player
-      ] as Entity[];
-  }, []); // Logic depends on mutable ref, so it's stable-ish but returns new array.
+    return entityManagerRef.current.getAllEntities();
+  }, []);
+
+  // Memoize effect systems for stable references
+  const effectSystems = useMemo(() => ({
+    particleSystem: particleSystemRef.current,
+    starfield: starfieldRef.current,
+    screenShake: screenShakeRef.current,
+    crtEffect: crtEffectRef.current,
+  }), []);
 
   return {
-    entities: getEntities(), // This will be called on render.
+    entities: getEntities(),
     entitiesVersion,
     notifications,
+    ...effectSystems,
     movePlayer,
     shoot,
     resetGame,
   };
 };
-
