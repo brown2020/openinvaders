@@ -1,16 +1,16 @@
 // src/components/game/Game.tsx
 
-import React, { useEffect, useState } from 'react';
-import { useGameStore } from '@/lib/store/game-store';
-import { useGameEngine } from '@/hooks/useGameEngine';
-import GameCanvas from './GameCanvas';
-import GameOverlay from './GameOverlay';
-import GameHUD from './GameHUD';
-import GameControls from './GameControls';
-import TacticalAdvisor from './TacticalAdvisor';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { soundManager } from '@/lib/sounds/SoundManager';
-import { ScoreNotification } from './ScoreNotification';
+import React, { useEffect, useState } from "react";
+import { useGameStore } from "@/lib/store/game-store";
+import { useGameEngine } from "@/hooks/useGameEngine";
+import GameCanvas from "./GameCanvas";
+import GameOverlay from "./GameOverlay";
+import GameHUD from "./GameHUD";
+import GameControls from "./GameControls";
+import TacticalAdvisor from "./TacticalAdvisor";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { soundManager } from "@/lib/sounds/SoundManager";
+import { ScoreNotification } from "./ScoreNotification";
 
 /**
  * Main game container component
@@ -48,12 +48,8 @@ const Game: React.FC = () => {
     soundManager.setMuted(!isSoundEnabled);
   }, [isSoundEnabled]);
 
-  const handleRestart = () => {
-    resetStore();
-    resetEngine(true);
-  };
-
-  const handleStart = () => {
+  // Single handler for both start and restart (same behavior)
+  const handleStartOrRestart = () => {
     resetStore();
     resetEngine(true);
   };
@@ -66,12 +62,7 @@ const Game: React.FC = () => {
       </h1>
 
       {/* HUD */}
-      <GameHUD
-        score={score}
-        highScore={highScore}
-        wave={wave}
-        lives={lives}
-      />
+      <GameHUD score={score} highScore={highScore} wave={wave} lives={lives} />
 
       {/* Game Container */}
       <div className="relative">
@@ -82,6 +73,7 @@ const Game: React.FC = () => {
           screenShake={screenShake}
           crtEffect={crtEffect}
           version={entitiesVersion}
+          isPaused={status !== "PLAYING"}
           className="border-2 border-cyan-500/30"
         />
 
@@ -91,9 +83,9 @@ const Game: React.FC = () => {
           score={score}
           highScore={highScore}
           wave={wave}
-          onStart={handleStart}
-          onRestart={handleRestart}
-          onResume={() => setStatus('PLAYING')}
+          onStart={handleStartOrRestart}
+          onRestart={handleStartOrRestart}
+          onResume={() => setStatus("PLAYING")}
         />
 
         {/* Score Notifications */}
@@ -117,13 +109,13 @@ const Game: React.FC = () => {
       {/* Game Controls */}
       <GameControls
         gameState={status}
-        onPause={() => setStatus('PAUSED')}
-        onResume={() => setStatus('PLAYING')}
-        onRestart={handleRestart}
+        onPause={() => setStatus("PAUSED")}
+        onResume={() => setStatus("PLAYING")}
+        onRestart={handleStartOrRestart}
         onToggleSound={toggleSound}
         onShowHelp={() => setShowHelp(true)}
-        onMoveLeft={(isMoving) => movePlayer('left', isMoving)}
-        onMoveRight={(isMoving) => movePlayer('right', isMoving)}
+        onMoveLeft={(isMoving) => movePlayer("left", isMoving)}
+        onMoveRight={(isMoving) => movePlayer("right", isMoving)}
         onShoot={shoot}
         isSoundEnabled={isSoundEnabled}
       />
@@ -145,7 +137,7 @@ const Game: React.FC = () => {
               <div className="text-cyan-300 pixel-font">RESTART</div>
               <div className="text-slate-300">R</div>
             </div>
-            
+
             <div className="border-t border-cyan-500/30 pt-4">
               <h4 className="text-cyan-400 pixel-font mb-2 text-sm">SCORING</h4>
               <div className="grid grid-cols-2 gap-2 text-xs">

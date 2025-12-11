@@ -37,52 +37,45 @@ export interface BoundingBox {
 /**
  * Game status states
  */
-export type GameStatus = 'MENU' | 'PLAYING' | 'PAUSED' | 'GAME_OVER';
+export type GameStatus = "MENU" | "PLAYING" | "PAUSED" | "GAME_OVER";
 
 /**
  * Alien types based on row position
  */
-export type AlienType = 'TOP' | 'MIDDLE' | 'BOTTOM';
+export type AlienType = "TOP" | "MIDDLE" | "BOTTOM";
 
 /**
- * Power-up types
+ * Collision event types with discriminated union for type safety
  */
-export type PowerUpType = 'SHIELD' | 'MULTI_SHOT' | 'SPEED_BOOST';
+export type CollisionEvent =
+  | {
+      type: "ALIEN_KILLED";
+      payload: { alienType: AlienType };
+      points: number;
+      position: Position;
+    }
+  | {
+      type: "UFO_KILLED";
+      points: number;
+      position: Position;
+    }
+  | {
+      type: "PLAYER_HIT";
+      payload: { lives: number };
+      position: Position;
+    }
+  | {
+      type: "BARRIER_HIT";
+      payload: { destroyed: boolean };
+      position: Position;
+    }
+  | { type: "GAME_OVER" }
+  | { type: "ALIEN_LANDED" };
 
 /**
- * Sound effect types
+ * Helper type to extract event type string
  */
-export type SoundEffect = 
-  | 'SHOOT'
-  | 'EXPLOSION'
-  | 'ALIEN_KILLED'
-  | 'PLAYER_HIT'
-  | 'GAME_OVER'
-  | 'ALIEN_MOVE'
-  | 'POWERUP'
-  | 'UFO_FLYBY';
-
-/**
- * Collision event types
- */
-export type CollisionEventType =
-  | 'ALIEN_KILLED'
-  | 'PLAYER_HIT'
-  | 'BARRIER_HIT'
-  | 'UFO_KILLED'
-  | 'GAME_OVER'
-  | 'ALIEN_LANDED'
-  | 'POWERUP_COLLECTED';
-
-/**
- * Collision event payload
- */
-export interface CollisionEvent {
-  type: CollisionEventType;
-  payload?: Record<string, unknown>;
-  points?: number;
-  position?: Position;
-}
+export type CollisionEventType = CollisionEvent["type"];
 
 /**
  * Score notification for floating score popups
@@ -110,26 +103,6 @@ export interface Particle {
 }
 
 /**
- * Screen shake configuration
- */
-export interface ScreenShake {
-  intensity: number;
-  duration: number;
-  startTime: number;
-}
-
-/**
- * Visual effect configuration
- */
-export interface VisualEffect {
-  id: number;
-  type: 'explosion' | 'hit' | 'powerup';
-  position: Position;
-  startTime: number;
-  duration: number;
-}
-
-/**
  * Game store state interface
  */
 export interface GameState {
@@ -148,17 +121,11 @@ export interface GameState {
  */
 export interface GameActions {
   setStatus: (status: GameStatus) => void;
-  setScore: (score: number) => void;
   incrementScore: (points: number) => void;
-  setHighScore: (score: number) => void;
-  setWave: (wave: number) => void;
   incrementWave: () => void;
   setLives: (lives: number) => void;
-  decrementLives: () => void;
   toggleSound: () => void;
   resetGame: () => void;
-  incrementCombo: () => void;
-  resetCombo: () => void;
 }
 
 /**
@@ -178,47 +145,4 @@ export enum RenderLayer {
   UFO = 5,
   PLAYER = 6,
   PARTICLES = 7,
-  UI = 8,
 }
-
-/**
- * Color palette for the game
- */
-export const GAME_COLORS = {
-  // Primary colors
-  PRIMARY: '#00ff88',
-  PRIMARY_GLOW: '#00ff8844',
-  SECONDARY: '#ff0088',
-  SECONDARY_GLOW: '#ff008844',
-  
-  // Entity colors
-  PLAYER: '#00ffff',
-  PLAYER_GLOW: '#00ffff44',
-  PROJECTILE_PLAYER: '#00ff88',
-  PROJECTILE_ALIEN: '#ff6600',
-  
-  // Alien colors by type
-  ALIEN_TOP: '#ff0066',
-  ALIEN_MIDDLE: '#ff9900',
-  ALIEN_BOTTOM: '#ffff00',
-  
-  // UFO
-  UFO: '#ff00ff',
-  UFO_GLOW: '#ff00ff66',
-  
-  // Barriers
-  BARRIER: '#00ff44',
-  
-  // UI
-  SCORE: '#ffffff',
-  HIGH_SCORE: '#ffff00',
-  
-  // Effects
-  EXPLOSION: ['#ffffff', '#ffff00', '#ff9900', '#ff0000'],
-  PARTICLE: ['#00ffff', '#00ff88', '#ff0088', '#ffff00'],
-  
-  // Background
-  BACKGROUND: '#0a0a12',
-  STAR: '#ffffff',
-} as const;
-

@@ -1,13 +1,18 @@
 // src/lib/entities/entity.ts
 
-import { Position, Dimensions, Velocity, BoundingBox, RenderLayer } from '@/types/game';
+import {
+  Position,
+  Dimensions,
+  Velocity,
+  BoundingBox,
+  RenderLayer,
+} from "@/types/game";
 
-export type { Position, Dimensions as EntityDimensions };
+export type { Position };
 
 export interface EntityConfig {
   position: Position;
   dimensions: Dimensions;
-  sprite?: HTMLImageElement;
 }
 
 /**
@@ -17,7 +22,6 @@ export abstract class Entity {
   position: Position;
   dimensions: Dimensions;
   velocity: Velocity;
-  sprite?: HTMLImageElement;
   isDestroyed: boolean;
   isActive: boolean;
   renderLayer: RenderLayer;
@@ -25,7 +29,6 @@ export abstract class Entity {
   constructor(config: EntityConfig) {
     this.position = { ...config.position };
     this.dimensions = { ...config.dimensions };
-    this.sprite = config.sprite;
     this.velocity = { x: 0, y: 0 };
     this.isDestroyed = false;
     this.isActive = true;
@@ -80,14 +83,5 @@ export abstract class Entity {
       a.top >= b.bottom ||
       a.bottom <= b.top
     );
-  }
-
-  /**
-   * Get distance to another entity
-   */
-  distanceTo(other: Entity): number {
-    const a = this.getCenter();
-    const b = other.getCenter();
-    return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
   }
 }

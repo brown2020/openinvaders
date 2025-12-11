@@ -1,10 +1,10 @@
 // src/components/game/TacticalAdvisor.tsx
 
-import React, { useEffect, useRef, useState } from 'react';
-import { useCompletion } from '@ai-sdk/react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, Sparkles, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React, { useEffect, useRef, useState } from "react";
+import { useCompletion } from "@ai-sdk/react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Bot, Sparkles, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface TacticalAdvisorProps {
   score: number;
@@ -16,24 +16,29 @@ interface TacticalAdvisorProps {
 /**
  * AI-powered tactical advisor that provides gameplay tips
  */
-const TacticalAdvisor: React.FC<TacticalAdvisorProps> = ({ 
-  score, 
-  wave, 
-  lives, 
-  gameStatus 
+const TacticalAdvisor: React.FC<TacticalAdvisorProps> = ({
+  score,
+  wave,
+  lives,
+  gameStatus,
 }) => {
   const { completion, complete, isLoading, error } = useCompletion({
-    api: '/api/completion',
+    api: "/api/completion",
   });
 
   const [isMinimized, setIsMinimized] = useState(false);
   const [hasApiKey, setHasApiKey] = useState(true);
 
-  const lastTriggerRef = useRef({
+  // Track previous values and current score for context messages
+  const stateRef = useRef({
     wave,
     lives,
     status: gameStatus,
+    score,
   });
+
+  // Keep score updated in ref (doesn't trigger effect)
+  stateRef.current.score = score;
 
   // Check if API is available
   useEffect(() => {
@@ -42,36 +47,38 @@ const TacticalAdvisor: React.FC<TacticalAdvisorProps> = ({
     }
   }, [error]);
 
-  // Trigger advice on significant events
+  // Trigger advice on significant events (wave change, life lost, game start)
   useEffect(() => {
     if (!hasApiKey) return;
-    
-    const prev = lastTriggerRef.current;
-    let shouldTrigger = false;
-    let context = '';
 
-    if (gameStatus === 'PLAYING' && prev.status !== 'PLAYING') {
+    const prev = stateRef.current;
+    let shouldTrigger = false;
+    let context = "";
+
+    if (gameStatus === "PLAYING" && prev.status !== "PLAYING") {
       shouldTrigger = true;
-      context = 'Game started. Give a brief, encouraging tactical tip.';
+      context = "Game started. Give a brief, encouraging tactical tip.";
     } else if (wave > prev.wave) {
       shouldTrigger = true;
-      context = `Wave ${wave} started! Score: ${score}. Give a quick tip for this wave.`;
+      context = `Wave ${wave} started! Score: ${prev.score}. Give a quick tip for this wave.`;
     } else if (lives < prev.lives && lives > 0) {
       shouldTrigger = true;
-      context = `Player lost a life! ${lives} lives remaining. Score: ${score}. Give brief encouragement.`;
+      context = `Player lost a life! ${lives} lives remaining. Score: ${prev.score}. Give brief encouragement.`;
     }
 
     if (shouldTrigger && !isLoading) {
       complete(context);
-      lastTriggerRef.current = { wave, lives, status: gameStatus };
     }
-  }, [score, wave, lives, gameStatus, complete, isLoading, hasApiKey]);
+
+    // Update tracked state
+    stateRef.current = { wave, lives, status: gameStatus, score: prev.score };
+  }, [wave, lives, gameStatus, complete, isLoading, hasApiKey]);
 
   // Don't render if no API key or error
   if (!hasApiKey) return null;
 
   // Don't show during menu
-  if (gameStatus === 'MENU') return null;
+  if (gameStatus === "MENU") return null;
 
   return (
     <div className="fixed bottom-4 right-4 z-50 max-w-xs pointer-events-none">
@@ -87,14 +94,16 @@ const TacticalAdvisor: React.FC<TacticalAdvisorProps> = ({
               <div className="bg-blue-500/20 p-1.5 rounded-full shrink-0">
                 <Bot className="w-4 h-4 text-blue-400" />
               </div>
-              
+
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <h4 className="text-blue-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
                     Tactical AI
-                    {isLoading && <Sparkles className="w-3 h-3 animate-pulse" />}
+                    {isLoading && (
+                      <Sparkles className="w-3 h-3 animate-pulse" />
+                    )}
                   </h4>
-                  <button 
+                  <button
                     onClick={() => setIsMinimized(true)}
                     className="text-blue-400/50 hover:text-blue-400 transition-colors"
                   >
@@ -102,7 +111,7 @@ const TacticalAdvisor: React.FC<TacticalAdvisorProps> = ({
                   </button>
                 </div>
                 <p className="text-blue-100/90 text-xs leading-relaxed">
-                  {completion || 'Analyzing battle conditions...'}
+                  {completion || "Analyzing battle conditions..."}
                 </p>
               </div>
             </div>

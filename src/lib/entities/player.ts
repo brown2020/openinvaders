@@ -1,21 +1,27 @@
 // src/lib/entities/player.ts
 
-import { Entity, EntityConfig } from './entity';
-import { GAME_DIMENSIONS, PLAYER, PROJECTILE } from '../constants/game';
-import { Projectile, ProjectileConfig } from './projectile';
-import { RenderLayer, GAME_COLORS } from '@/types/game';
-import { drawGlowRect } from '@/lib/effects/ScreenEffects';
+import { Entity, EntityConfig } from "./entity";
+import {
+  GAME_DIMENSIONS,
+  PLAYER,
+  PROJECTILE,
+  FRAME_TIME,
+} from "../constants/game";
+import { Projectile, ProjectileConfig } from "./projectile";
+import { GAME_COLORS } from "@/lib/constants/colors";
+import { RenderLayer } from "@/types/game";
+import { renderPixelArt, drawGlow } from "@/lib/utils/canvas";
 
 // Pixel art pattern for the player ship (16x8 grid, scaled up 3x)
 const PLAYER_PIXELS = [
-  '       ##       ',
-  '      ####      ',
-  '      ####      ',
-  '  ############  ',
-  ' ############## ',
-  '################',
-  '################',
-  '## ########## ##',
+  "       ##       ",
+  "      ####      ",
+  "      ####      ",
+  "  ############  ",
+  " ############## ",
+  "################",
+  "################",
+  "## ########## ##",
 ];
 
 export class Player extends Entity {
@@ -24,7 +30,7 @@ export class Player extends Entity {
   lastShot: number;
   isMovingLeft: boolean;
   isMovingRight: boolean;
-  
+
   // Visual effects
   private thrusterPhase: number = 0;
   private hitFlashTime: number = 0;
@@ -41,7 +47,7 @@ export class Player extends Entity {
   }
 
   update(deltaTime: number): void {
-    const frameSpeed = (PLAYER.SPEED * deltaTime) / 16.67;
+    const frameSpeed = (PLAYER.SPEED * deltaTime) / FRAME_TIME;
 
     if (this.isMovingLeft) {
       this.position.x = Math.max(
@@ -58,7 +64,7 @@ export class Player extends Entity {
 
     // Update thruster animation
     this.thrusterPhase += deltaTime * 0.02;
-    
+
     // Update hit flash
     if (this.hitFlashTime > 0) {
       this.hitFlashTime -= deltaTime;
@@ -67,7 +73,7 @@ export class Player extends Entity {
 
   render(ctx: CanvasRenderingContext2D): void {
     const now = performance.now();
-    
+
     // Invincibility blink
     if (this.invincibleUntil > now) {
       if (Math.floor(now / 100) % 2 === 0) return;
@@ -78,71 +84,38 @@ export class Player extends Entity {
 
     ctx.save();
 
-    // Draw glow effect
-    const glowGradient = ctx.createRadialGradient(
-      centerX, centerY + 5, 0,
-      centerX, centerY + 5, this.dimensions.width
-    );
-    glowGradient.addColorStop(0, `${GAME_COLORS.PLAYER}33`);
-    glowGradient.addColorStop(0.5, `${GAME_COLORS.PLAYER}11`);
-    glowGradient.addColorStop(1, 'transparent');
-    
-    ctx.fillStyle = glowGradient;
-    ctx.fillRect(
-      this.position.x - 20,
-      this.position.y - 20,
-      this.dimensions.width + 40,
-      this.dimensions.height + 40
+    // Draw glow effect using shared utility
+    drawGlow(
+      ctx,
+      centerX,
+      centerY + 5,
+      this.dimensions.width,
+      GAME_COLORS.PLAYER,
+      0.2
     );
 
     // Draw thruster flame
     this.renderThruster(ctx, centerX);
 
     // Determine color based on hit flash
-    const mainColor = this.hitFlashTime > 0 ? '#ffffff' : GAME_COLORS.PLAYER;
-    
-    // Draw pixel art ship
-    this.renderPixelShip(ctx, mainColor);
+    const mainColor = this.hitFlashTime > 0 ? "#ffffff" : GAME_COLORS.PLAYER;
+
+    // Draw pixel art ship using shared utility
+    const pixelSize = 3;
+    const startX =
+      this.position.x + (this.dimensions.width - 16 * pixelSize) / 2;
+    const startY =
+      this.position.y + (this.dimensions.height - 8 * pixelSize) / 2;
+
+    ctx.shadowColor = mainColor;
+    ctx.shadowBlur = 4;
+    renderPixelArt(ctx, PLAYER_PIXELS, startX, startY, pixelSize, mainColor);
+    ctx.shadowBlur = 0;
 
     // Draw cockpit glow
-    ctx.beginPath();
-    const cockpitGradient = ctx.createRadialGradient(
-      centerX, this.position.y + 8, 0,
-      centerX, this.position.y + 8, 6
-    );
-    cockpitGradient.addColorStop(0, '#ffffff');
-    cockpitGradient.addColorStop(0.5, GAME_COLORS.PRIMARY);
-    cockpitGradient.addColorStop(1, 'transparent');
-    ctx.fillStyle = cockpitGradient;
-    ctx.arc(centerX, this.position.y + 8, 6, 0, Math.PI * 2);
-    ctx.fill();
+    drawGlow(ctx, centerX, this.position.y + 8, 6, GAME_COLORS.PRIMARY, 1);
 
     ctx.restore();
-  }
-
-  private renderPixelShip(ctx: CanvasRenderingContext2D, color: string): void {
-    const pixelSize = 3;
-    const startX = this.position.x + (this.dimensions.width - 16 * pixelSize) / 2;
-    const startY = this.position.y + (this.dimensions.height - 8 * pixelSize) / 2;
-
-    ctx.fillStyle = color;
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 4;
-
-    for (let row = 0; row < PLAYER_PIXELS.length; row++) {
-      for (let col = 0; col < PLAYER_PIXELS[row].length; col++) {
-        if (PLAYER_PIXELS[row][col] === '#') {
-          ctx.fillRect(
-            startX + col * pixelSize,
-            startY + row * pixelSize,
-            pixelSize,
-            pixelSize
-          );
-        }
-      }
-    }
-
-    ctx.shadowBlur = 0;
   }
 
   private renderThruster(ctx: CanvasRenderingContext2D, centerX: number): void {
@@ -152,19 +125,23 @@ export class Player extends Entity {
 
     // Main flame
     const flameGradient = ctx.createLinearGradient(
-      centerX, thrusterY,
-      centerX, thrusterY + flameHeight
+      centerX,
+      thrusterY,
+      centerX,
+      thrusterY + flameHeight
     );
-    flameGradient.addColorStop(0, '#ffffff');
-    flameGradient.addColorStop(0.3, '#00ffff');
-    flameGradient.addColorStop(0.6, '#0088ff');
-    flameGradient.addColorStop(1, 'transparent');
+    flameGradient.addColorStop(0, "#ffffff");
+    flameGradient.addColorStop(0.3, "#00ffff");
+    flameGradient.addColorStop(0.6, "#0088ff");
+    flameGradient.addColorStop(1, "transparent");
 
     ctx.beginPath();
     ctx.moveTo(centerX - flameWidth, thrusterY);
     ctx.quadraticCurveTo(
-      centerX, thrusterY + flameHeight * 1.5,
-      centerX + flameWidth, thrusterY
+      centerX,
+      thrusterY + flameHeight * 1.5,
+      centerX + flameWidth,
+      thrusterY
     );
     ctx.fillStyle = flameGradient;
     ctx.fill();
@@ -173,12 +150,14 @@ export class Player extends Entity {
     if (this.isMovingLeft || this.isMovingRight) {
       const sideFlameHeight = flameHeight * 0.6;
       const offsetX = this.isMovingLeft ? 8 : -8;
-      
+
       ctx.beginPath();
       ctx.moveTo(centerX + offsetX - 3, thrusterY);
       ctx.quadraticCurveTo(
-        centerX + offsetX, thrusterY + sideFlameHeight,
-        centerX + offsetX + 3, thrusterY
+        centerX + offsetX,
+        thrusterY + sideFlameHeight,
+        centerX + offsetX + 3,
+        thrusterY
       );
       ctx.fillStyle = flameGradient;
       ctx.fill();
@@ -191,7 +170,10 @@ export class Player extends Entity {
       this.lastShot = now;
       const projectileConfig: ProjectileConfig = {
         position: {
-          x: this.position.x + this.dimensions.width / 2 - PROJECTILE.PLAYER.WIDTH / 2,
+          x:
+            this.position.x +
+            this.dimensions.width / 2 -
+            PROJECTILE.PLAYER.WIDTH / 2,
           y: this.position.y,
         },
         dimensions: {

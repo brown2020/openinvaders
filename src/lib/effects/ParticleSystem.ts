@@ -1,7 +1,9 @@
 // src/lib/effects/ParticleSystem.ts
 
-import { Position, Particle, GAME_COLORS } from '@/types/game';
-import { GAME_DIMENSIONS } from '@/lib/constants/game';
+import { Position, Particle } from "@/types/game";
+import { GAME_COLORS } from "@/lib/constants/colors";
+import { GAME_DIMENSIONS, FRAME_TIME } from "@/lib/constants/game";
+import { PARTICLE } from "@/lib/constants/effects";
 
 /**
  * High-performance particle system for explosions and effects
@@ -14,15 +16,15 @@ export class ParticleSystem {
    * Create an explosion effect at the given position
    */
   createExplosion(position: Position, color?: string, count = 12): void {
-    const baseColors = color 
-      ? [color, '#ffffff', '#ffff00']
+    const baseColors = color
+      ? [color, "#ffffff", "#ffff00"]
       : GAME_COLORS.EXPLOSION;
 
     for (let i = 0; i < count; i++) {
       const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
       const speed = 2 + Math.random() * 4;
       const colorIndex = Math.floor(Math.random() * baseColors.length);
-      
+
       this.particles.push({
         id: this.nextId++,
         x: position.x,
@@ -44,7 +46,7 @@ export class ParticleSystem {
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = 1 + Math.random() * 3;
-      
+
       this.particles.push({
         id: this.nextId++,
         x: position.x,
@@ -66,7 +68,7 @@ export class ParticleSystem {
     for (let i = 0; i < count; i++) {
       const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI;
       const speed = 1 + Math.random() * 2;
-      
+
       this.particles.push({
         id: this.nextId++,
         x: position.x + (Math.random() - 0.5) * 10,
@@ -82,56 +84,36 @@ export class ParticleSystem {
   }
 
   /**
-   * Create power-up collection effect
-   */
-  createPowerupEffect(position: Position, color: string): void {
-    for (let i = 0; i < 20; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 2 + Math.random() * 3;
-      
-      this.particles.push({
-        id: this.nextId++,
-        x: position.x,
-        y: position.y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        life: 1,
-        maxLife: 1,
-        color,
-        size: 2 + Math.random() * 2,
-      });
-    }
-  }
-
-  /**
    * Update all particles
    */
   update(deltaTime: number): void {
-    const dt = deltaTime / 16.67;
-    const gravity = 0.05;
-    const friction = 0.98;
-    const decay = 0.02;
+    const dt = deltaTime / FRAME_TIME;
 
-    this.particles = this.particles.filter(particle => {
+    this.particles = this.particles.filter((particle) => {
       // Update position
       particle.x += particle.vx * dt;
       particle.y += particle.vy * dt;
-      
+
       // Apply gravity and friction
-      particle.vy += gravity * dt;
-      particle.vx *= friction;
-      particle.vy *= friction;
-      
+      particle.vy += PARTICLE.GRAVITY * dt;
+      particle.vx *= PARTICLE.FRICTION;
+      particle.vy *= PARTICLE.FRICTION;
+
       // Decay life
-      particle.life -= decay * dt;
-      
+      particle.life -= PARTICLE.DECAY * dt;
+
       // Shrink particle
-      particle.size *= 0.98;
-      
+      particle.size *= PARTICLE.SHRINK_RATE;
+
       // Remove dead particles
-      return particle.life > 0 && particle.size > 0.2 &&
-        particle.x >= 0 && particle.x <= GAME_DIMENSIONS.WIDTH &&
-        particle.y >= 0 && particle.y <= GAME_DIMENSIONS.HEIGHT;
+      return (
+        particle.life > 0 &&
+        particle.size > PARTICLE.MIN_SIZE &&
+        particle.x >= 0 &&
+        particle.x <= GAME_DIMENSIONS.WIDTH &&
+        particle.y >= 0 &&
+        particle.y <= GAME_DIMENSIONS.HEIGHT
+      );
     });
   }
 
@@ -140,32 +122,36 @@ export class ParticleSystem {
    */
   render(ctx: CanvasRenderingContext2D): void {
     ctx.save();
-    
+
     for (const particle of this.particles) {
       const alpha = particle.life / particle.maxLife;
-      
+
       // Draw glow
       ctx.beginPath();
       const gradient = ctx.createRadialGradient(
-        particle.x, particle.y, 0,
-        particle.x, particle.y, particle.size * 2
+        particle.x,
+        particle.y,
+        0,
+        particle.x,
+        particle.y,
+        particle.size * 2
       );
       gradient.addColorStop(0, particle.color);
       gradient.addColorStop(0.5, `${particle.color}88`);
-      gradient.addColorStop(1, 'transparent');
+      gradient.addColorStop(1, "transparent");
       ctx.fillStyle = gradient;
       ctx.globalAlpha = alpha;
       ctx.arc(particle.x, particle.y, particle.size * 2, 0, Math.PI * 2);
       ctx.fill();
-      
+
       // Draw core
       ctx.beginPath();
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = "#ffffff";
       ctx.globalAlpha = alpha * 0.8;
       ctx.arc(particle.x, particle.y, particle.size * 0.5, 0, Math.PI * 2);
       ctx.fill();
     }
-    
+
     ctx.restore();
   }
 
@@ -183,4 +169,3 @@ export class ParticleSystem {
     return this.particles.length;
   }
 }
-

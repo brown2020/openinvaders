@@ -1,8 +1,11 @@
 // src/components/game/GameHUD.tsx
 
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Heart, Zap } from 'lucide-react';
+import React from "react";
+import { motion } from "framer-motion";
+import { Heart, Zap } from "lucide-react";
+
+// Hoisted constant to avoid array allocation on every render
+const LIVES_INDICES = [0, 1, 2] as const;
 
 interface GameHUDProps {
   score: number;
@@ -14,12 +17,7 @@ interface GameHUDProps {
 /**
  * Heads-up display showing score, lives, and wave information
  */
-const GameHUD: React.FC<GameHUDProps> = ({
-  score,
-  highScore,
-  wave,
-  lives,
-}) => {
+const GameHUD: React.FC<GameHUDProps> = ({ score, highScore, wave, lives }) => {
   return (
     <div className="w-full max-w-[800px] mb-3">
       <div className="flex justify-between items-center px-2 py-2 bg-slate-900/60 backdrop-blur-sm rounded-lg border border-cyan-500/20">
@@ -30,11 +28,11 @@ const GameHUD: React.FC<GameHUDProps> = ({
           </span>
           <motion.span
             key={score}
-            initial={{ scale: 1.2, color: '#ffffff' }}
-            animate={{ scale: 1, color: '#00ff88' }}
+            initial={{ scale: 1.2, color: "#ffffff" }}
+            animate={{ scale: 1, color: "#00ff88" }}
             className="text-lg md:text-xl font-bold pixel-font text-green-400"
           >
-            {score.toLocaleString().padStart(6, '0')}
+            {score.toLocaleString().padStart(6, "0")}
           </motion.span>
         </div>
 
@@ -62,7 +60,7 @@ const GameHUD: React.FC<GameHUDProps> = ({
             High Score
           </span>
           <span className="text-lg md:text-xl font-bold pixel-font text-cyan-400">
-            {highScore.toLocaleString().padStart(6, '0')}
+            {highScore.toLocaleString().padStart(6, "0")}
           </span>
         </div>
 
@@ -72,20 +70,18 @@ const GameHUD: React.FC<GameHUDProps> = ({
             Lives
           </span>
           <div className="flex items-center gap-1">
-            {Array.from({ length: 3 }).map((_, i) => (
+            {LIVES_INDICES.map((i) => (
               <motion.div
                 key={i}
                 initial={{ scale: 1 }}
-                animate={{ 
+                animate={{
                   scale: i < lives ? 1 : 0.5,
                   opacity: i < lives ? 1 : 0.2,
                 }}
               >
                 <Heart
                   className={`w-5 h-5 ${
-                    i < lives 
-                      ? 'text-red-500 fill-red-500' 
-                      : 'text-slate-600'
+                    i < lives ? "text-red-500 fill-red-500" : "text-slate-600"
                   }`}
                 />
               </motion.div>
@@ -98,4 +94,3 @@ const GameHUD: React.FC<GameHUDProps> = ({
 };
 
 export default GameHUD;
-

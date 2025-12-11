@@ -2,7 +2,10 @@
 
 import { Entity, EntityConfig } from "./entity";
 import { BARRIER } from "../constants/game";
-import { RenderLayer, GAME_COLORS } from "@/types/game";
+import { GAME_COLORS } from "@/lib/constants/colors";
+import { RenderLayer } from "@/types/game";
+import { adjustBrightness } from "@/lib/utils/color";
+import { drawGlow } from "@/lib/utils/canvas";
 
 export interface BarrierConfig extends EntityConfig {
   damageState?: number;
@@ -13,6 +16,8 @@ export class Barrier extends Entity {
   pixelData: boolean[][];
   private glowIntensity: number = 1;
   private readonly pixelScale: number = 2;
+  private remainingPixels: number = 0;
+  private totalPixels: number = 0;
 
   constructor(config: BarrierConfig) {
     super(config);
@@ -33,15 +38,19 @@ export class Barrier extends Entity {
     const archHeight = Math.floor(rows * 0.35);
     const archWidth = Math.floor(cols * 0.35);
 
+    let removedPixels = 0;
+
     for (let y = 0; y < archHeight; y++) {
       for (let x = 0; x < cols; x++) {
         // Left corner
         if (x < archWidth && y < archWidth - x) {
           data[y][x] = false;
+          removedPixels++;
         }
         // Right corner
         if (x >= cols - archWidth && y < x - (cols - archWidth - 1)) {
           data[y][x] = false;
+          removedPixels++;
         }
       }
     }
@@ -53,9 +62,16 @@ export class Barrier extends Entity {
 
     for (let y = rows - notchHeight; y < rows; y++) {
       for (let x = notchStart; x < notchStart + notchWidth; x++) {
-        data[y][x] = false;
+        if (data[y][x]) {
+          data[y][x] = false;
+          removedPixels++;
+        }
       }
     }
+
+    // Track total and remaining pixels incrementally
+    this.totalPixels = rows * cols;
+    this.remainingPixels = this.totalPixels - removedPixels;
 
     return data;
   }
@@ -70,33 +86,18 @@ export class Barrier extends Entity {
 
     ctx.save();
 
-    // Calculate damage opacity
-    const healthPercent = 1 - this.damageState / BARRIER.DAMAGE_STATES;
     const baseColor = GAME_COLORS.BARRIER;
+    const centerX = this.position.x + this.dimensions.width / 2;
+    const centerY = this.position.y + this.dimensions.height / 2;
 
-    // Draw glow effect
-    const glowGradient = ctx.createRadialGradient(
-      this.position.x + this.dimensions.width / 2,
-      this.position.y + this.dimensions.height / 2,
-      0,
-      this.position.x + this.dimensions.width / 2,
-      this.position.y + this.dimensions.height / 2,
-      this.dimensions.width * 0.8
-    );
-    glowGradient.addColorStop(
-      0,
-      `${baseColor}${Math.floor(this.glowIntensity * 40)
-        .toString(16)
-        .padStart(2, "0")}`
-    );
-    glowGradient.addColorStop(1, "transparent");
-
-    ctx.fillStyle = glowGradient;
-    ctx.fillRect(
-      this.position.x - 20,
-      this.position.y - 20,
-      this.dimensions.width + 40,
-      this.dimensions.height + 40
+    // Draw glow effect using shared utility
+    drawGlow(
+      ctx,
+      centerX,
+      centerY,
+      this.dimensions.width * 0.8,
+      baseColor,
+      this.glowIntensity * 0.16
     );
 
     // Draw pixels
@@ -108,7 +109,7 @@ export class Barrier extends Entity {
         if (this.pixelData[y][x]) {
           // Add some color variation based on position
           const brightness = 0.7 + Math.sin((x + y) * 0.5) * 0.15;
-          ctx.fillStyle = this.adjustBrightness(baseColor, brightness);
+          ctx.fillStyle = adjustBrightness(baseColor, brightness);
 
           ctx.fillRect(
             this.position.x + x * this.pixelScale,
@@ -122,20 +123,6 @@ export class Barrier extends Entity {
 
     ctx.shadowBlur = 0;
     ctx.restore();
-  }
-
-  private adjustBrightness(hex: string, factor: number): string {
-    // Parse hex color
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-
-    // Adjust brightness
-    const newR = Math.min(255, Math.floor(r * factor));
-    const newG = Math.min(255, Math.floor(g * factor));
-    const newB = Math.min(255, Math.floor(b * factor));
-
-    return `rgb(${newR}, ${newG}, ${newB})`;
   }
 
   damage(x: number, y: number, radius: number = 4): void {
@@ -168,14 +155,14 @@ export class Barrier extends Entity {
       }
     }
 
-    // Update damage state based on remaining pixels
-    const remainingPixels = this.pixelData.flat().filter(Boolean).length;
-    const totalPixels = this.pixelData.length * this.pixelData[0].length;
-    const damagePercent = 1 - remainingPixels / totalPixels;
+    // Update remaining pixels incrementally (no array allocation)
+    this.remainingPixels -= pixelsDestroyed;
 
+    // Calculate damage state from tracked values
+    const damagePercent = 1 - this.remainingPixels / this.totalPixels;
     this.damageState = Math.floor(damagePercent * BARRIER.DAMAGE_STATES);
 
-    if (remainingPixels < totalPixels * 0.1) {
+    if (this.remainingPixels < this.totalPixels * 0.1) {
       this.isDestroyed = true;
     }
   }

@@ -1,6 +1,7 @@
 // src/lib/effects/ScreenEffects.ts
 
-import { GAME_DIMENSIONS } from '@/lib/constants/game';
+import { GAME_DIMENSIONS } from "@/lib/constants/game";
+import { CRT } from "@/lib/constants/effects";
 
 /**
  * Screen shake effect controller
@@ -44,7 +45,7 @@ export class ScreenShake {
 
     // Decay shake over time
     const currentIntensity = this.intensity * (1 - progress);
-    
+
     this.offsetX = (Math.random() - 0.5) * 2 * currentIntensity;
     this.offsetY = (Math.random() - 0.5) * 2 * currentIntensity;
 
@@ -74,8 +75,6 @@ export class ScreenShake {
  * CRT scanline effect renderer
  */
 export class CRTEffect {
-  private scanlineOpacity = 0.08;
-  private vignetteStrength = 0.3;
   private enabled = true;
 
   /**
@@ -85,12 +84,12 @@ export class CRTEffect {
     if (!this.enabled) return;
 
     ctx.save();
-    ctx.fillStyle = `rgba(0, 0, 0, ${this.scanlineOpacity})`;
-    
-    for (let y = 0; y < GAME_DIMENSIONS.HEIGHT; y += 3) {
+    ctx.fillStyle = `rgba(0, 0, 0, ${CRT.SCANLINE_OPACITY})`;
+
+    for (let y = 0; y < GAME_DIMENSIONS.HEIGHT; y += CRT.SCANLINE_SPACING) {
       ctx.fillRect(0, y, GAME_DIMENSIONS.WIDTH, 1);
     }
-    
+
     ctx.restore();
   }
 
@@ -102,15 +101,21 @@ export class CRTEffect {
 
     const centerX = GAME_DIMENSIONS.WIDTH / 2;
     const centerY = GAME_DIMENSIONS.HEIGHT / 2;
-    const radius = Math.max(GAME_DIMENSIONS.WIDTH, GAME_DIMENSIONS.HEIGHT) * 0.7;
+    const radius =
+      Math.max(GAME_DIMENSIONS.WIDTH, GAME_DIMENSIONS.HEIGHT) *
+      CRT.VIGNETTE_RADIUS_FACTOR;
 
     const gradient = ctx.createRadialGradient(
-      centerX, centerY, radius * 0.3,
-      centerX, centerY, radius
+      centerX,
+      centerY,
+      radius * CRT.VIGNETTE_INNER_FACTOR,
+      centerX,
+      centerY,
+      radius
     );
-    
-    gradient.addColorStop(0, 'transparent');
-    gradient.addColorStop(1, `rgba(0, 0, 0, ${this.vignetteStrength})`);
+
+    gradient.addColorStop(0, "transparent");
+    gradient.addColorStop(1, `rgba(0, 0, 0, ${CRT.VIGNETTE_STRENGTH})`);
 
     ctx.save();
     ctx.fillStyle = gradient;
@@ -141,98 +146,3 @@ export class CRTEffect {
     this.enabled = enabled;
   }
 }
-
-/**
- * Glow effect helper
- */
-export function drawGlow(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  radius: number,
-  color: string,
-  intensity = 0.5
-): void {
-  ctx.save();
-  
-  const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
-  gradient.addColorStop(0, color);
-  gradient.addColorStop(0.5, `${color}${Math.floor(intensity * 128).toString(16).padStart(2, '0')}`);
-  gradient.addColorStop(1, 'transparent');
-  
-  ctx.globalCompositeOperation = 'lighter';
-  ctx.fillStyle = gradient;
-  ctx.beginPath();
-  ctx.arc(x, y, radius, 0, Math.PI * 2);
-  ctx.fill();
-  
-  ctx.restore();
-}
-
-/**
- * Draw a glowing rectangle
- */
-export function drawGlowRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  color: string,
-  glowSize = 8
-): void {
-  ctx.save();
-  
-  // Draw glow layers
-  for (let i = glowSize; i > 0; i -= 2) {
-    const alpha = (1 - i / glowSize) * 0.3;
-    ctx.shadowColor = color;
-    ctx.shadowBlur = i * 2;
-    ctx.fillStyle = `${color}${Math.floor(alpha * 255).toString(16).padStart(2, '0')}`;
-    ctx.fillRect(x - i, y - i, width + i * 2, height + i * 2);
-  }
-  
-  // Draw solid core
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = color;
-  ctx.fillRect(x, y, width, height);
-  
-  ctx.restore();
-}
-
-/**
- * Draw text with glow effect
- */
-export function drawGlowText(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  x: number,
-  y: number,
-  color: string,
-  font: string,
-  glowSize = 10
-): void {
-  ctx.save();
-  
-  ctx.font = font;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  
-  // Draw glow
-  ctx.shadowColor = color;
-  ctx.shadowBlur = glowSize;
-  ctx.fillStyle = color;
-  
-  // Multiple passes for stronger glow
-  for (let i = 0; i < 3; i++) {
-    ctx.fillText(text, x, y);
-  }
-  
-  // Draw solid text
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText(text, x, y);
-  
-  ctx.restore();
-}
-

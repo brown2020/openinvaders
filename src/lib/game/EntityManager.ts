@@ -1,14 +1,21 @@
 // src/lib/game/EntityManager.ts
 
-import { Player } from '@/lib/entities/player';
-import { Alien, AlienFormation } from '@/lib/entities/alien';
-import { Barrier } from '@/lib/entities/barrier';
-import { Projectile } from '@/lib/entities/projectile';
-import { Ufo } from '@/lib/entities/ufo';
-import { GAME_DIMENSIONS, PLAYER, ALIEN, BARRIER, UFO, PROJECTILE } from '@/lib/constants/game';
-import { soundManager } from '@/lib/sounds/SoundManager';
-import { SoundType } from '@/lib/sounds/SoundTypes';
-import { Entity } from '@/lib/entities/entity';
+import { Player } from "@/lib/entities/player";
+import { Alien, alienFormation } from "@/lib/entities/alien";
+import { Barrier } from "@/lib/entities/barrier";
+import { Projectile } from "@/lib/entities/projectile";
+import { Ufo } from "@/lib/entities/ufo";
+import {
+  GAME_DIMENSIONS,
+  PLAYER,
+  ALIEN,
+  BARRIER,
+  UFO,
+  PROJECTILE,
+} from "@/lib/constants/game";
+import { soundManager } from "@/lib/sounds/SoundManager";
+import { SoundType } from "@/lib/sounds/SoundTypes";
+import { Entity } from "@/lib/entities/entity";
 
 /**
  * Manages all game entities and their lifecycle
@@ -45,10 +52,10 @@ export class EntityManager {
 
   private createAliens(): Alien[] {
     const aliens: Alien[] = [];
-    
+
     for (let row = 0; row < ALIEN.ROWS; row++) {
       for (let col = 0; col < ALIEN.COLS; col++) {
-        const type = row === 0 ? 'TOP' : row < 3 ? 'MIDDLE' : 'BOTTOM';
+        const type = row === 0 ? "TOP" : row < 3 ? "MIDDLE" : "BOTTOM";
         const formationPosition = {
           x: col * ALIEN.HORIZONTAL_SPACING + GAME_DIMENSIONS.MARGIN,
           y: row * ALIEN.VERTICAL_SPACING + ALIEN.INITIAL_Y,
@@ -69,13 +76,15 @@ export class EntityManager {
         );
       }
     }
-    
+
     return aliens;
   }
 
   private createBarriers(): Barrier[] {
     const barriers: Barrier[] = [];
-    const barrierSpacing = (GAME_DIMENSIONS.WIDTH - BARRIER.COUNT * BARRIER.WIDTH) / (BARRIER.COUNT + 1);
+    const barrierSpacing =
+      (GAME_DIMENSIONS.WIDTH - BARRIER.COUNT * BARRIER.WIDTH) /
+      (BARRIER.COUNT + 1);
 
     for (let i = 0; i < BARRIER.COUNT; i++) {
       barriers.push(
@@ -91,12 +100,16 @@ export class EntityManager {
         })
       );
     }
-    
+
     return barriers;
   }
 
   private getNextUfoSpawnTime(): number {
-    return performance.now() + UFO.MIN_SPAWN_MS + Math.random() * (UFO.MAX_SPAWN_MS - UFO.MIN_SPAWN_MS);
+    return (
+      performance.now() +
+      UFO.MIN_SPAWN_MS +
+      Math.random() * (UFO.MAX_SPAWN_MS - UFO.MIN_SPAWN_MS)
+    );
   }
 
   /**
@@ -107,7 +120,7 @@ export class EntityManager {
     this.player.update(deltaTime);
 
     // Update alien formation movement
-    AlienFormation.update(this.aliens, deltaTime);
+    alienFormation.update(this.aliens, deltaTime);
 
     // Update individual aliens and handle shooting
     this.updateAliens(deltaTime, wave);
@@ -125,22 +138,28 @@ export class EntityManager {
     // Update and filter projectiles
     this.projectiles = this.projectiles.filter((projectile) => {
       projectile.update(deltaTime);
-      return projectile.isActive && 
-        projectile.position.y >= 0 && 
-        projectile.position.y <= GAME_DIMENSIONS.HEIGHT;
+      return (
+        projectile.isActive &&
+        projectile.position.y >= 0 &&
+        projectile.position.y <= GAME_DIMENSIONS.HEIGHT
+      );
     });
   }
 
   private updateAliens(deltaTime: number, wave: number): void {
-    const alienShots = this.projectiles.filter(p => !p.isPlayerProjectile).length;
-    
+    const alienShots = this.projectiles.filter(
+      (p) => !p.isPlayerProjectile
+    ).length;
+
     this.aliens.forEach((alien) => {
       if (!alien.isDestroyed) {
         alien.update(deltaTime);
 
         // Alien shooting logic
-        const shootChance = (ALIEN.BASE_SHOOT_CHANCE + ALIEN.WAVE_SHOOT_MULTIPLIER * wave) * (deltaTime / 1000);
-        
+        const shootChance =
+          (ALIEN.BASE_SHOOT_CHANCE + ALIEN.WAVE_SHOOT_MULTIPLIER * wave) *
+          (deltaTime / 1000);
+
         if (
           Math.random() < shootChance &&
           alien.canShoot(this.aliens) &&
@@ -163,7 +182,7 @@ export class EntityManager {
     // Update UFO
     if (this.ufo) {
       this.ufo.update(deltaTime);
-      
+
       if (!this.ufo.isActive) {
         this.ufo = null;
         this.nextUfoSpawnTime = this.getNextUfoSpawnTime();
@@ -178,31 +197,61 @@ export class EntityManager {
     this.projectiles.push(projectile);
   }
 
+  // Reusable array to avoid allocations
+  private entityBuffer: Entity[] = [];
+
   /**
    * Get all active entities for rendering
+   * Uses a reusable buffer to minimize allocations
+   * Entities are added in render layer order to avoid sorting
    */
   getAllEntities(): Entity[] {
-    const entities: Entity[] = [
-      ...this.barriers.filter(b => !b.isDestroyed),
-      ...this.projectiles.filter(p => p.isActive),
-      ...this.aliens.filter(a => !a.isDestroyed),
-    ];
+    // Clear buffer without reallocating
+    this.entityBuffer.length = 0;
 
-    if (this.ufo && this.ufo.isActive) {
-      entities.push(this.ufo);
+    // Add entities in render layer order (BARRIERS=2, PROJECTILES=3, ALIENS=4, UFO=5, PLAYER=6)
+
+    // Add barriers (layer 2)
+    for (let i = 0; i < this.barriers.length; i++) {
+      if (!this.barriers[i].isDestroyed) {
+        this.entityBuffer.push(this.barriers[i]);
+      }
     }
 
-    entities.push(this.player);
+    // Add projectiles (layer 3)
+    for (let i = 0; i < this.projectiles.length; i++) {
+      if (this.projectiles[i].isActive) {
+        this.entityBuffer.push(this.projectiles[i]);
+      }
+    }
 
-    // Sort by render layer
-    return entities.sort((a, b) => a.renderLayer - b.renderLayer);
+    // Add aliens (layer 4)
+    for (let i = 0; i < this.aliens.length; i++) {
+      if (!this.aliens[i].isDestroyed) {
+        this.entityBuffer.push(this.aliens[i]);
+      }
+    }
+
+    // Add UFO (layer 5)
+    if (this.ufo && this.ufo.isActive) {
+      this.entityBuffer.push(this.ufo);
+    }
+
+    // Add player (layer 6)
+    this.entityBuffer.push(this.player);
+
+    return this.entityBuffer;
   }
 
   /**
    * Get count of alive aliens
    */
   getAliveAlienCount(): number {
-    return this.aliens.filter(a => !a.isDestroyed).length;
+    let count = 0;
+    for (let i = 0; i < this.aliens.length; i++) {
+      if (!this.aliens[i].isDestroyed) count++;
+    }
+    return count;
   }
 
   /**
@@ -219,12 +268,12 @@ export class EntityManager {
     if (fullReset) {
       this.barriers = this.createBarriers();
     }
-    
+
     this.player = this.createPlayer();
     this.aliens = this.createAliens();
     this.projectiles = [];
     this.ufo = null;
     this.nextUfoSpawnTime = this.getNextUfoSpawnTime();
-    AlienFormation.reset();
+    alienFormation.reset();
   }
 }
