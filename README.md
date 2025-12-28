@@ -48,15 +48,15 @@ A modern, open-source remake of the classic Space Invaders arcade game built wit
 
 | Category             | Technology                                      | Version |
 | -------------------- | ----------------------------------------------- | ------- |
-| **Framework**        | [Next.js](https://nextjs.org/)                  | 16.x    |
-| **Language**         | [TypeScript](https://www.typescriptlang.org/)   | 5.x     |
-| **UI Library**       | [React](https://react.dev/)                     | 19.x    |
-| **Styling**          | [Tailwind CSS](https://tailwindcss.com/)        | 4.x     |
-| **State Management** | [Zustand](https://zustand-demo.pmnd.rs/)        | 5.x     |
-| **Animations**       | [Framer Motion](https://www.framer.com/motion/) | 12.x    |
-| **AI SDK**           | [Vercel AI SDK](https://sdk.vercel.ai/)         | 5.x     |
-| **UI Components**    | [Radix UI](https://www.radix-ui.com/)           | Latest  |
-| **Icons**            | [Lucide React](https://lucide.dev/)             | Latest  |
+| **Framework**        | [Next.js](https://nextjs.org/)                  | 16.1.1  |
+| **Language**         | [TypeScript](https://www.typescriptlang.org/)   | 5.9.3   |
+| **UI Library**       | [React](https://react.dev/)                     | 19.2.3  |
+| **Styling**          | [Tailwind CSS](https://tailwindcss.com/)        | 4.1.18  |
+| **State Management** | [Zustand](https://zustand-demo.pmnd.rs/)        | 5.0.9   |
+| **Animations**       | [Framer Motion](https://www.framer.com/motion/) | 12.23.26 |
+| **AI SDK**           | [Vercel AI SDK](https://sdk.vercel.ai/)         | 6.0.3   |
+| **UI Components**    | [Radix UI](https://www.radix-ui.com/)           | 1.1.x   |
+| **Icons**            | [Lucide React](https://lucide.dev/)             | 0.562.0 |
 | **Rendering**        | HTML5 Canvas                                    | -       |
 
 ---
@@ -65,7 +65,7 @@ A modern, open-source remake of the classic Space Invaders arcade game built wit
 
 ### Prerequisites
 
-- **Node.js** 18.17 or later
+- **Node.js** 20.9.0 or later
 - **npm**, **yarn**, or **pnpm** package manager
 - **OpenAI API key** (optional, for AI tactical advisor)
 
@@ -319,7 +319,7 @@ Contributions are welcome! Here's how to get started:
 
 ## 📄 License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** - see the [LICENSE](LICENSE.md) file for details.
 
 ---
 
@@ -352,5 +352,5 @@ If you enjoy this project:
 ---
 
 <div align="center">
-  <sub>Built with ❤️ using Next.js 16, React 19, and Tailwind CSS 4</sub>
+  <sub>Built with ❤️ using Next.js 16.1, React 19.2, and Tailwind CSS 4.1</sub>
 </div>
