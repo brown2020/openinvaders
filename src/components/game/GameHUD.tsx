@@ -2,10 +2,25 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Heart, Zap } from "lucide-react";
+import { Zap } from "lucide-react";
+import { EXTRA_LIFE } from "@/lib/constants/game";
 
-// Hoisted constant to avoid array allocation on every render
-const LIVES_INDICES = [0, 1, 2] as const;
+/**
+ * Ship icon component for lives display (authentic to original game)
+ */
+const ShipIcon: React.FC<{ active: boolean }> = ({ active }) => (
+  <svg
+    width="20"
+    height="12"
+    viewBox="0 0 20 12"
+    className={active ? "text-cyan-400" : "text-slate-600"}
+  >
+    <path
+      d="M9 0h2v2h-2zM8 2h4v2H8zM4 4h12v2H4zM2 6h16v2H2zM2 8h16v4H2z"
+      fill="currentColor"
+    />
+  </svg>
+);
 
 interface GameHUDProps {
   score: number;
@@ -64,26 +79,23 @@ const GameHUD: React.FC<GameHUDProps> = ({ score, highScore, wave, lives }) => {
           </span>
         </div>
 
-        {/* Lives */}
+        {/* Lives (shown as ship icons like original arcade) */}
         <div className="flex flex-col items-end">
           <span className="text-[10px] text-cyan-500/70 pixel-font uppercase tracking-widest">
             Lives
           </span>
           <div className="flex items-center gap-1">
-            {LIVES_INDICES.map((i) => (
+            {Array.from({ length: EXTRA_LIFE.MAX_LIVES }, (_, i) => (
               <motion.div
                 key={i}
                 initial={{ scale: 1 }}
                 animate={{
                   scale: i < lives ? 1 : 0.5,
-                  opacity: i < lives ? 1 : 0.2,
+                  opacity: i < lives ? 1 : 0.15,
                 }}
+                className={i >= 3 ? "hidden sm:block" : ""}
               >
-                <Heart
-                  className={`w-5 h-5 ${
-                    i < lives ? "text-red-500 fill-red-500" : "text-slate-600"
-                  }`}
-                />
+                <ShipIcon active={i < lives} />
               </motion.div>
             ))}
           </div>

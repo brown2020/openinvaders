@@ -23,9 +23,9 @@ export const GAME_COLORS = {
   ALIEN_MIDDLE: "#ff9900",
   ALIEN_BOTTOM: "#ffff00",
 
-  // UFO
-  UFO: "#ff00ff",
-  UFO_GLOW: "#ff00ff66",
+  // UFO (red in original arcade cabinet)
+  UFO: "#ff3333",
+  UFO_GLOW: "#ff333366",
 
   // Barriers
   BARRIER: "#00ff44",

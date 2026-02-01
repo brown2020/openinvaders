@@ -8,20 +8,29 @@ import { Ufo, getUfoScore } from "@/lib/entities/ufo";
 import { PLAYER } from "@/lib/constants/game";
 import { CollisionEvent } from "@/types/game";
 
+/** Stored shot count for UFO scoring (set via checkCollisions) */
+let currentShotCount = 0;
+
 /**
  * Check all collisions and return events
+ * @param shotCount - Player shot count for deterministic UFO scoring
  */
 export function checkCollisions(
   player: Player,
   aliens: Alien[],
   barriers: Barrier[],
   projectiles: Projectile[],
-  ufo: Ufo | null
+  ufo: Ufo | null,
+  shotCount: number = 0
 ): CollisionEvent[] {
   const events: CollisionEvent[] = [];
+  currentShotCount = shotCount;
 
   // Check projectile collisions
   checkProjectileCollisions(player, aliens, barriers, projectiles, ufo, events);
+
+  // Check if aliens are marching through barriers (original game feature)
+  checkAlienBarrierCollisions(aliens, barriers);
 
   // Check if aliens reached the bottom
   checkAlienLanding(aliens, events);
@@ -81,7 +90,8 @@ function checkPlayerProjectileHits(
     projectile.isActive = false;
     ufo.isActive = false;
 
-    const points = getUfoScore();
+    // Use deterministic scoring based on shot count (original game mechanic)
+    const points = getUfoScore(currentShotCount);
     events.push({
       type: "UFO_KILLED",
       points,
@@ -155,6 +165,45 @@ function checkBarrierHit(
           position: { x: hitX, y: hitY },
         });
         return;
+      }
+    }
+  }
+}
+
+/**
+ * Check if aliens are marching through barriers (original game feature)
+ * Aliens destroy barrier pixels as they overlap
+ */
+function checkAlienBarrierCollisions(
+  aliens: Alien[],
+  barriers: Barrier[]
+): void {
+  for (let i = 0; i < aliens.length; i++) {
+    const alien = aliens[i];
+    if (alien.isDestroyed) continue;
+
+    for (let j = 0; j < barriers.length; j++) {
+      const barrier = barriers[j];
+      if (barrier.isDestroyed) continue;
+
+      // Check if alien overlaps with barrier
+      if (alien.collidesWith(barrier)) {
+        // Damage the barrier in the overlapping area
+        const overlapLeft = Math.max(alien.position.x, barrier.position.x);
+        const overlapRight = Math.min(
+          alien.position.x + alien.dimensions.width,
+          barrier.position.x + barrier.dimensions.width
+        );
+        const overlapTop = Math.max(alien.position.y, barrier.position.y);
+        const overlapBottom = Math.min(
+          alien.position.y + alien.dimensions.height,
+          barrier.position.y + barrier.dimensions.height
+        );
+
+        // Damage multiple points in the overlap area
+        const centerX = (overlapLeft + overlapRight) / 2;
+        const centerY = (overlapTop + overlapBottom) / 2;
+        barrier.damage(centerX, centerY, 8);
       }
     }
   }

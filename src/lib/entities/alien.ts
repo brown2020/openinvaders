@@ -14,30 +14,35 @@ import { ALIEN_TYPE_COLORS } from "@/lib/constants/colors";
 import { RenderLayer, AlienType } from "@/types/game";
 import { renderPixelArt, drawMultiGlow } from "@/lib/utils/canvas";
 
-// Pixel art patterns for different alien types (12x8 grid)
+// Authentic Space Invaders pixel art patterns
+// TOP: Squid (8x8 original, padded to 12x8 for consistency)
+// MIDDLE: Crab (11x8 original, padded to 12x8)
+// BOTTOM: Octopus (12x8 original)
 const ALIEN_PIXELS = {
+  // Squid - top row alien (30 points in original)
   TOP: [
     [
-      "    ####    ",
-      "  ########  ",
-      " ########## ",
-      " ##  ##  ## ",
-      " ########## ",
-      "   ##  ##   ",
-      "  ##    ##  ",
-      " ##      ## ",
+      "    ##      ",
+      "   ####     ",
+      "  ######    ",
+      " ## ## ##   ",
+      " ########   ",
+      "   #  #     ",
+      "  #    #    ",
+      " #      #   ",
     ],
     [
-      "    ####    ",
-      "  ########  ",
-      " ########## ",
-      " ##  ##  ## ",
-      " ########## ",
-      "  ##    ##  ",
-      "   ##  ##   ",
-      "    ####    ",
+      "    ##      ",
+      "   ####     ",
+      "  ######    ",
+      " ## ## ##   ",
+      " ########   ",
+      "  #    #    ",
+      "  ##  ##    ",
+      " #  ##  #   ",
     ],
   ],
+  // Crab - middle row aliens (20 points in original)
   MIDDLE: [
     [
       "  #      #  ",
@@ -60,6 +65,7 @@ const ALIEN_PIXELS = {
       " #        # ",
     ],
   ],
+  // Octopus - bottom row aliens (10 points in original)
   BOTTOM: [
     [
       "   ######   ",
@@ -156,8 +162,8 @@ export const alienFormation: AlienFormationState = {
       }
     }
 
-    // March sound
-    soundManager.play(SoundType.ALIEN_MOVE);
+    // Play next note in 4-note march cycle (authentic Space Invaders sound)
+    soundManager.playMarchNote();
 
     // Speed up as aliens are destroyed
     const ratio = aliveCount / (ALIEN.ROWS * ALIEN.COLS);
