@@ -109,7 +109,9 @@ export const useGameEngine = () => {
               SCREEN_SHAKE.UFO_KILL,
               SCREEN_SHAKE.UFO_KILL_DURATION
             );
-            soundManager.play(SoundType.EXPLOSION);
+            // Stop UFO flying sound and play explosion
+            soundManager.stop(SoundType.UFO_FLYING);
+            soundManager.play(SoundType.UFO_KILLED);
             needsBump = true;
             break;
           }
@@ -133,6 +135,7 @@ export const useGameEngine = () => {
 
           case "GAME_OVER": {
             setStatus("GAME_OVER");
+            soundManager.stop(SoundType.UFO_FLYING);
             soundManager.play(SoundType.GAME_OVER);
             break;
           }
@@ -195,13 +198,14 @@ export const useGameEngine = () => {
       // Update entities
       entityManager.update(deltaTime, timestamp, wave);
 
-      // Check collisions
+      // Check collisions (pass shot count for deterministic UFO scoring)
       const events = checkCollisions(
         entityManager.player,
         entityManager.aliens,
         entityManager.barriers,
         entityManager.projectiles,
-        entityManager.ufo
+        entityManager.ufo,
+        entityManager.shotCount
       );
 
       // Handle events

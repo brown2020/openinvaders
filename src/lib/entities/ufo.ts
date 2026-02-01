@@ -6,16 +6,17 @@ import { GAME_COLORS } from "@/lib/constants/colors";
 import { RenderLayer } from "@/types/game";
 import { renderPixelArt, drawMultiGlow } from "@/lib/utils/canvas";
 
-// UFO pixel art pattern (20x8 grid)
+// Authentic Space Invaders UFO/Mystery Ship pattern (16x7 original, padded to 20x8)
+// The original was a classic flying saucer with dome
 const UFO_PIXELS = [
-  "      ########      ",
-  "   ##############   ",
-  "  ################  ",
-  " ################## ",
-  "####################",
-  "  ##  ##  ##  ##  ",
-  "   ##        ##   ",
-  "    ##      ##    ",
+  "     ######         ",
+  "   ##########       ",
+  "  ############      ",
+  " ############## #   ",
+  "####  ##  ##  ####  ",
+  "  ####    ####      ",
+  "    ##    ##        ",
+  "                    ",
 ];
 
 export interface UfoConfig {
@@ -208,7 +209,11 @@ export class Ufo extends Entity {
   }
 }
 
-export function getUfoScore(): number {
-  const idx = Math.floor(Math.random() * UFO.SCORES.length);
-  return UFO.SCORES[idx];
+/**
+ * Get UFO score based on shot count (original deterministic scoring)
+ * The original game used a lookup table based on the player's shot count
+ * This allowed skilled players to predict and time shots for 300 points
+ */
+export function getUfoScore(shotCount: number): number {
+  return UFO.SCORE_TABLE[shotCount % UFO.SCORE_TABLE.length];
 }
