@@ -12,16 +12,17 @@ import { GAME_COLORS } from "@/lib/constants/colors";
 import { RenderLayer } from "@/types/game";
 import { renderPixelArt, drawGlow } from "@/lib/utils/canvas";
 
-// Pixel art pattern for the player ship (16x8 grid, scaled up 3x)
+// Authentic Space Invaders cannon pattern (13x8 original, padded to 16x8)
+// The original cannon had a distinctive narrow top and wide base
 const PLAYER_PIXELS = [
-  "       ##       ",
-  "      ####      ",
-  "      ####      ",
-  "  ############  ",
-  " ############## ",
+  "      ##        ",
+  "     ####       ",
+  "     ####       ",
+  " ############ ## ",
   "################",
   "################",
-  "## ########## ##",
+  "################",
+  "################",
 ];
 
 export class Player extends Entity {

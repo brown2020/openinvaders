@@ -38,10 +38,10 @@ export const ALIEN = {
   HORIZONTAL_SPACING: 48,
   VERTICAL_SPACING: 44,
   INITIAL_Y: 100,
-  MOVE_INTERVAL: 900, // Slightly faster start
-  MIN_MOVE_INTERVAL: 80, // Can get very fast
-  STEP_X: 14, // Slightly larger steps
-  STEP_DROP: 20, // Smaller drops for more waves
+  MOVE_INTERVAL: 900, // Base interval (adjusted by alien count)
+  MIN_MOVE_INTERVAL: 50, // Minimum interval when few aliens remain
+  STEP_X: 12, // Step size matching original proportions
+  STEP_DROP: 16, // Original: 8px * 2 scale factor
   POINTS: {
     TOP_ROW: 30,
     MIDDLE_ROW: 20,
@@ -80,8 +80,8 @@ export const PROJECTILE = {
     COLOR: "#ff6600",
   },
   CAPS: {
-    PLAYER_MAX: 2, // Allow 2 shots on screen
-    ALIEN_MAX: 4,
+    PLAYER_MAX: 1, // Original: only 1 player shot on screen
+    ALIEN_MAX: 3, // Original: max 3 alien shots
   },
 } as const;
 
@@ -95,5 +95,14 @@ export const UFO = {
   Y_POSITION: 55,
   MIN_SPAWN_MS: 10000,
   MAX_SPAWN_MS: 25000,
-  SCORES: [50, 100, 150, 300],
+  // Original deterministic scoring based on shot count (mod 15)
+  SCORE_TABLE: [100, 50, 50, 100, 150, 100, 100, 50, 300, 100, 100, 100, 50, 150, 100],
+} as const;
+
+/**
+ * Extra life configuration (original game feature)
+ */
+export const EXTRA_LIFE = {
+  SCORE_THRESHOLD: 1500, // Award extra life at this score
+  MAX_LIVES: 6, // Maximum lives cap
 } as const;
