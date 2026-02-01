@@ -114,6 +114,7 @@ export interface GameState {
   isSoundEnabled: boolean;
   combo: number;
   lastKillTime: number;
+  extraLifeAwarded: boolean; // Track if extra life at 1500 pts was given
 }
 
 /**

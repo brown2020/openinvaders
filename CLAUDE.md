@@ -110,14 +110,33 @@ The game works fully without an API key - the AI advisor just won't appear.
 - `src/components/game/GameCanvas.tsx` - Canvas rendering
 - `src/app/api/completion/route.ts` - AI advisor API endpoint
 
-## Scoring System
+## Scoring System (Authentic to Original 1978 Game)
 
-- Bottom aliens: 10 pts, Middle: 20 pts, Top: 30 pts
-- UFO: 50-300 pts (random)
-- Combo multiplier: Kills within 1 second stack up to 10x
+- Bottom aliens (Octopus): 10 pts
+- Middle aliens (Crab): 20 pts
+- Top aliens (Squid): 30 pts
+- UFO: 50-300 pts (deterministic based on shot count, not random)
+- Extra life awarded at 1500 points
+- Combo multiplier: Kills within 1 second stack up to 10x (optional modern feature)
+
+## Authenticity Features
+
+The game implements several authentic 1978 Space Invaders mechanics:
+
+- **Single bullet limit** - Only 1 player shot on screen at a time
+- **4-note march sound** - Iconic descending bass cycle that speeds up
+- **Deterministic UFO scoring** - Based on shot count (23rd shot pattern = 300 pts)
+- **Alien-barrier collision** - Aliens destroy bunkers as they march through
+- **Extra life at 1500 points** - Original arcade feature
+- **Authentic sprites** - Squid, Crab, Octopus designs matching original
+- **UFO flying sound** - Continuous warbling while UFO is on screen
+
+Classic mode settings available in `src/lib/constants/classic.ts`.
 
 ## Testing Notes
 
 - No test framework currently configured
 - Test manually on desktop (keyboard) and mobile (touch controls)
 - Check 60 FPS performance in browser dev tools
+- Verify march sound speeds up as aliens are destroyed
+- Test extra life trigger at 1500 points

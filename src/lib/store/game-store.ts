@@ -3,6 +3,9 @@
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 import { GameStatus, GameStore } from "@/types/game";
+import { EXTRA_LIFE } from "@/lib/constants/game";
+import { soundManager } from "@/lib/sounds/SoundManager";
+import { SoundType } from "@/lib/sounds/SoundTypes";
 
 /**
  * Game state store with Zustand
@@ -21,6 +24,7 @@ export const useGameStore = create<GameStore>()(
         isSoundEnabled: true,
         combo: 0,
         lastKillTime: 0,
+        extraLifeAwarded: false, // Track if extra life at 1500 pts was given
 
         // Actions
         setStatus: (status) => set({ status }),
@@ -44,11 +48,26 @@ export const useGameStore = create<GameStore>()(
             const totalPoints = Math.floor(points * bonusMultiplier);
             const newScore = state.score + totalPoints;
 
+            // Check for extra life at threshold (original game feature)
+            let newLives = state.lives;
+            let extraLifeAwarded = state.extraLifeAwarded;
+            if (
+              !state.extraLifeAwarded &&
+              state.score < EXTRA_LIFE.SCORE_THRESHOLD &&
+              newScore >= EXTRA_LIFE.SCORE_THRESHOLD
+            ) {
+              newLives = Math.min(state.lives + 1, EXTRA_LIFE.MAX_LIVES);
+              extraLifeAwarded = true;
+              soundManager.play(SoundType.EXTRA_LIFE);
+            }
+
             return {
               score: newScore,
               highScore: Math.max(newScore, state.highScore),
               combo: newCombo,
               lastKillTime: now,
+              lives: newLives,
+              extraLifeAwarded,
             };
           }),
 
@@ -71,6 +90,7 @@ export const useGameStore = create<GameStore>()(
             status: "PLAYING" as GameStatus,
             combo: 0,
             lastKillTime: 0,
+            extraLifeAwarded: false, // Reset for new game
             // High score and sound settings persist
           })),
       }),

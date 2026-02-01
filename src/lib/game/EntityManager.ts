@@ -27,6 +27,8 @@ export class EntityManager {
   projectiles: Projectile[];
   ufo: Ufo | null;
   private nextUfoSpawnTime: number;
+  /** Track player shot count for deterministic UFO scoring (original game mechanic) */
+  shotCount: number;
 
   constructor() {
     this.player = this.createPlayer();
@@ -35,6 +37,7 @@ export class EntityManager {
     this.projectiles = [];
     this.ufo = null;
     this.nextUfoSpawnTime = this.getNextUfoSpawnTime();
+    this.shotCount = 0;
   }
 
   private createPlayer(): Player {
@@ -177,6 +180,8 @@ export class EntityManager {
     if (!this.ufo && timestamp >= this.nextUfoSpawnTime) {
       const fromLeft = Math.random() < 0.5;
       this.ufo = new Ufo({ fromLeft });
+      // Start UFO flying sound (authentic warbling sound)
+      soundManager.play(SoundType.UFO_FLYING);
     }
 
     // Update UFO
@@ -184,6 +189,8 @@ export class EntityManager {
       this.ufo.update(deltaTime);
 
       if (!this.ufo.isActive) {
+        // Stop UFO flying sound when it exits screen
+        soundManager.stop(SoundType.UFO_FLYING);
         this.ufo = null;
         this.nextUfoSpawnTime = this.getNextUfoSpawnTime();
       }
@@ -192,9 +199,14 @@ export class EntityManager {
 
   /**
    * Add a projectile to the game
+   * Tracks player shot count for deterministic UFO scoring
    */
   addProjectile(projectile: Projectile): void {
     this.projectiles.push(projectile);
+    // Track player shots for UFO scoring (original game mechanic)
+    if (projectile.isPlayerProjectile) {
+      this.shotCount++;
+    }
   }
 
   // Reusable array to avoid allocations
@@ -275,5 +287,9 @@ export class EntityManager {
     this.ufo = null;
     this.nextUfoSpawnTime = this.getNextUfoSpawnTime();
     alienFormation.reset();
+    soundManager.resetMarchCycle();
+    if (fullReset) {
+      this.shotCount = 0;
+    }
   }
 }
