@@ -73,11 +73,6 @@ export type CollisionEvent =
   | { type: "ALIEN_LANDED" };
 
 /**
- * Helper type to extract event type string
- */
-export type CollisionEventType = CollisionEvent["type"];
-
-/**
  * Score notification for floating score popups
  */
 export interface ScoreNotification {

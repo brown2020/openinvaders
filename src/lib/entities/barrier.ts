@@ -76,7 +76,8 @@ export class Barrier extends Entity {
     return data;
   }
 
-  update(_deltaTime: number): void {
+  update(deltaTime: number): void {
+    void deltaTime;
     // Subtle pulsing glow
     this.glowIntensity = 0.6 + Math.sin(performance.now() * 0.002) * 0.2;
   }
