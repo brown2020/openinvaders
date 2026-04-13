@@ -1,6 +1,6 @@
 // src/lib/entities/ufo.ts
 
-import { Entity, EntityConfig } from "./entity";
+import { Entity } from "./entity";
 import { GAME_DIMENSIONS, UFO, FRAME_TIME } from "@/lib/constants/game";
 import { GAME_COLORS } from "@/lib/constants/colors";
 import { RenderLayer } from "@/types/game";

@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     });
 
     return result.toTextStreamResponse();
-  } catch (error) {
+  } catch {
     return new Response(JSON.stringify({ error: 'AI Service Unavailable' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },

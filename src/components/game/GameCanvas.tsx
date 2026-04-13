@@ -1,6 +1,6 @@
 // src/components/game/GameCanvas.tsx
 
-import React, { useCallback, useEffect, useRef, useMemo } from "react";
+import React, { useEffect, useRef, useMemo } from "react";
 import { GAME_DIMENSIONS } from "@/lib/constants/game";
 import { Entity } from "@/lib/entities/entity";
 import {
@@ -153,64 +153,84 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
     }
   }, []);
 
-  // Render function
-  const render = useCallback(() => {
-    if (!canvasRef.current || !ctxRef.current) return;
-
-    const ctx = ctxRef.current;
-    const gradients = gradientsRef.current;
-    const { WIDTH, HEIGHT } = GAME_DIMENSIONS;
-
-    ctx.save();
-
-    // Apply screen shake
-    screenShake.apply(ctx);
-
-    // Draw cached background gradient
-    if (gradients.background) {
-      ctx.fillStyle = gradients.background;
-      ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    }
-
-    // Draw starfield
-    starfield.render(ctx);
-
-    // Draw pre-rendered grid
-    if (gridCanvasRef.current) {
-      ctx.drawImage(gridCanvasRef.current, 0, 0);
-    }
-
-    // Render all entities
-    for (let i = 0; i < entities.length; i++) {
-      const entity = entities[i];
-      if (!entity.isDestroyed && entity.isActive) {
-        entity.render(ctx);
-      }
-    }
-
-    // Render particles
-    particleSystem.render(ctx);
-
-    // Apply CRT effects
-    crtEffect.render(ctx);
-
-    // Draw screen border glow with cached gradients
-    drawBorderGlow(ctx, gradients, WIDTH, HEIGHT);
-
-    ctx.restore();
-
-    // Continue render loop only if not paused
-    if (!isPaused) {
-      animationFrameRef.current = requestAnimationFrame(render);
-    }
-  }, [entities, particleSystem, starfield, screenShake, crtEffect, isPaused]);
-
-  // Set up render loop (respects pause state)
+  // Store render dependencies in a ref so the render loop can read latest values
+  const renderDepsRef = useRef({
+    entities,
+    particleSystem,
+    starfield,
+    screenShake,
+    crtEffect,
+    isPaused,
+  });
   useEffect(() => {
+    renderDepsRef.current = {
+      entities,
+      particleSystem,
+      starfield,
+      screenShake,
+      crtEffect,
+      isPaused,
+    };
+  });
+
+  // Set up render loop
+  useEffect(() => {
+    const renderFrame = () => {
+      if (!canvasRef.current || !ctxRef.current) return;
+
+      const ctx = ctxRef.current;
+      const gradients = gradientsRef.current;
+      const { WIDTH, HEIGHT } = GAME_DIMENSIONS;
+      const deps = renderDepsRef.current;
+
+      ctx.save();
+
+      // Apply screen shake
+      deps.screenShake.apply(ctx);
+
+      // Draw cached background gradient
+      if (gradients.background) {
+        ctx.fillStyle = gradients.background;
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+      }
+
+      // Draw starfield
+      deps.starfield.render(ctx);
+
+      // Draw pre-rendered grid
+      if (gridCanvasRef.current) {
+        ctx.drawImage(gridCanvasRef.current, 0, 0);
+      }
+
+      // Render all entities
+      for (let i = 0; i < deps.entities.length; i++) {
+        const entity = deps.entities[i];
+        if (!entity.isDestroyed && entity.isActive) {
+          entity.render(ctx);
+        }
+      }
+
+      // Render particles
+      deps.particleSystem.render(ctx);
+
+      // Apply CRT effects
+      deps.crtEffect.render(ctx);
+
+      // Draw screen border glow with cached gradients
+      drawBorderGlow(ctx, gradients, WIDTH, HEIGHT);
+
+      ctx.restore();
+
+      // Continue render loop only if not paused
+      if (!deps.isPaused) {
+        animationFrameRef.current = requestAnimationFrame(renderFrame);
+      }
+    };
+
     // Always render at least once (for pause screen display)
-    animationFrameRef.current = requestAnimationFrame(render);
+    animationFrameRef.current = requestAnimationFrame(renderFrame);
     return () => cancelAnimationFrame(animationFrameRef.current);
-  }, [render, version, isPaused]);
+  }, [version, isPaused]);
 
   // Memoize box shadow style
   const canvasStyle = useMemo(

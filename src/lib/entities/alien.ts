@@ -5,11 +5,9 @@ import {
   ALIEN,
   PROJECTILE,
   GAME_DIMENSIONS,
-  FRAME_TIME,
 } from "@/lib/constants/game";
 import { Projectile, ProjectileConfig } from "./projectile";
 import { soundManager } from "@/lib/sounds/SoundManager";
-import { SoundType } from "@/lib/sounds/SoundTypes";
 import { ALIEN_TYPE_COLORS } from "@/lib/constants/colors";
 import { RenderLayer, AlienType } from "@/types/game";
 import { renderPixelArt, drawMultiGlow } from "@/lib/utils/canvas";

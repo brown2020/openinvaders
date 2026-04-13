@@ -27,7 +27,7 @@ const TacticalAdvisor: React.FC<TacticalAdvisorProps> = ({
   });
 
   const [isMinimized, setIsMinimized] = useState(false);
-  const [hasApiKey, setHasApiKey] = useState(true);
+  const hasApiKey = !error;
 
   // Track previous values and current score for context messages
   const stateRef = useRef({
@@ -37,15 +37,10 @@ const TacticalAdvisor: React.FC<TacticalAdvisorProps> = ({
     score,
   });
 
-  // Keep score updated in ref (doesn't trigger effect)
-  stateRef.current.score = score;
-
-  // Check if API is available
+  // Keep score updated in ref
   useEffect(() => {
-    if (error) {
-      setHasApiKey(false);
-    }
-  }, [error]);
+    stateRef.current.score = score;
+  }, [score]);
 
   // Trigger advice on significant events (wave change, life lost, game start)
   useEffect(() => {
