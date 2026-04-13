@@ -50,13 +50,11 @@ const GameControls = memo<GameControlsProps>(
     const isPlaying = gameState === "PLAYING";
     const isPaused = gameState === "PAUSED";
     const isMenu = gameState === "MENU";
-    const [isTouchDevice, setIsTouchDevice] = useState(false);
-
-    useEffect(() => {
-      setIsTouchDevice(
-        "ontouchstart" in window || navigator.maxTouchPoints > 0
-      );
-    }, []);
+    const [isTouchDevice] = useState(
+      () =>
+        typeof window !== "undefined" &&
+        ("ontouchstart" in window || navigator.maxTouchPoints > 0)
+    );
 
     // Keyboard controls
     useEffect(() => {

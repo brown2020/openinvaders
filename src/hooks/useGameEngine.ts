@@ -1,6 +1,6 @@
 // src/hooks/useGameEngine.ts
 
-import { useEffect, useRef, useCallback, useState, useMemo } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { EntityManager } from "@/lib/game/EntityManager";
 import { useGameStore } from "@/lib/store/game-store";
 import { soundManager } from "@/lib/sounds/SoundManager";
@@ -16,6 +16,7 @@ import { ScoreNotification, CollisionEvent } from "@/types/game";
 import { ALIEN_TYPE_COLORS, GAME_COLORS } from "@/lib/constants/colors";
 import { SCREEN_SHAKE } from "@/lib/constants/effects";
 import { checkCollisions } from "@/lib/game/CollisionManager";
+import type { Entity } from "@/lib/entities/entity";
 
 /**
  * Core game engine hook that manages game state, updates, and rendering
@@ -24,20 +25,42 @@ export const useGameEngine = () => {
   const { status, wave, incrementScore, setStatus, setLives, incrementWave } =
     useGameStore();
 
-  // Game systems refs
-  const entityManagerRef = useRef<EntityManager>(new EntityManager());
+  // Game systems refs (class instances that are mutated by the game loop)
+  const entityManagerRef = useRef(new EntityManager());
   const lastTimeRef = useRef<number>(0);
   const animationFrameRef = useRef<number>(0);
 
-  // Visual effects systems
-  const particleSystemRef = useRef<ParticleSystem>(new ParticleSystem());
-  const starfieldRef = useRef<Starfield>(new Starfield());
-  const screenShakeRef = useRef<ScreenShake>(new ScreenShake());
-  const crtEffectRef = useRef<CRTEffect>(new CRTEffect());
+  // Visual effects systems refs
+  const particleSystemRef = useRef(new ParticleSystem());
+  const starfieldRef = useRef(new Starfield());
+  const screenShakeRef = useRef(new ScreenShake());
+  const crtEffectRef = useRef(new CRTEffect());
+
+  // State-managed snapshots for render (avoids reading refs during render)
+  const [entities, setEntities] = useState<Entity[]>([]);
+  const [effectSystems] = useState(() => ({
+    particleSystem: new ParticleSystem(),
+    starfield: new Starfield(),
+    screenShake: new ScreenShake(),
+    crtEffect: new CRTEffect(),
+  }));
+
+  // Sync effect system state refs with the stable objects passed to render
+  useEffect(() => {
+    particleSystemRef.current = effectSystems.particleSystem;
+    starfieldRef.current = effectSystems.starfield;
+    screenShakeRef.current = effectSystems.screenShake;
+    crtEffectRef.current = effectSystems.crtEffect;
+  }, [effectSystems]);
 
   // Entity version for triggering re-renders
   const [entitiesVersion, setEntitiesVersion] = useState(0);
   const bumpVersion = useCallback(() => setEntitiesVersion((v) => v + 1), []);
+
+  // Update entities snapshot when version changes
+  useEffect(() => {
+    setEntities(entityManagerRef.current.getAllEntities());
+  }, [entitiesVersion]);
 
   // Score notifications for floating score popups
   const [notifications, setNotifications] = useState<ScoreNotification[]>([]);
@@ -176,58 +199,25 @@ export const useGameEngine = () => {
     [bumpVersion]
   );
 
-  /**
-   * Main game update loop
-   */
-  const update = useCallback(
-    (timestamp: number) => {
-      if (status !== "PLAYING") return;
-
-      // Calculate delta time with frame rate cap
-      const deltaTime = lastTimeRef.current
-        ? Math.min(timestamp - lastTimeRef.current, 32)
-        : 16;
-      lastTimeRef.current = timestamp;
-
-      const entityManager = entityManagerRef.current;
-
-      // Update visual effects
-      starfieldRef.current.update(deltaTime);
-      particleSystemRef.current.update(deltaTime);
-
-      // Update entities
-      entityManager.update(deltaTime, timestamp, wave);
-
-      // Check collisions (pass shot count for deterministic UFO scoring)
-      const events = checkCollisions(
-        entityManager.player,
-        entityManager.aliens,
-        entityManager.barriers,
-        entityManager.projectiles,
-        entityManager.ufo,
-        entityManager.shotCount
-      );
-
-      // Handle events
-      let needsBump: boolean = handleCollisionEvents(events);
-
-      // Check win condition
-      if (entityManager.areAllAliensDestroyed()) {
-        incrementWave();
-        resetGame(false);
-        needsBump = true;
-      }
-
-      // Bump version if needed to trigger re-render
-      if (needsBump || events.length > 0) {
-        bumpVersion();
-      }
-
-      // Continue loop
-      animationFrameRef.current = requestAnimationFrame(update);
-    },
-    [status, wave, handleCollisionEvents, incrementWave, resetGame, bumpVersion]
-  );
+  // Store update loop deps in a ref for stable access from the animation frame callback
+  const updateDepsRef = useRef({
+    status,
+    wave,
+    handleCollisionEvents,
+    incrementWave,
+    resetGame,
+    bumpVersion,
+  });
+  useEffect(() => {
+    updateDepsRef.current = {
+      status,
+      wave,
+      handleCollisionEvents,
+      incrementWave,
+      resetGame,
+      bumpVersion,
+    };
+  });
 
   /**
    * Move player
@@ -267,36 +257,70 @@ export const useGameEngine = () => {
 
   // Start/stop game loop based on status
   useEffect(() => {
-    if (status === "PLAYING") {
-      lastTimeRef.current = 0;
-      animationFrameRef.current = requestAnimationFrame(update);
-    }
+    if (status !== "PLAYING") return;
+
+    lastTimeRef.current = 0;
+
+    const tick = (timestamp: number) => {
+      const deps = updateDepsRef.current;
+      if (deps.status !== "PLAYING") return;
+
+      // Calculate delta time with frame rate cap
+      const deltaTime = lastTimeRef.current
+        ? Math.min(timestamp - lastTimeRef.current, 32)
+        : 16;
+      lastTimeRef.current = timestamp;
+
+      const em = entityManagerRef.current;
+
+      // Update visual effects
+      starfieldRef.current.update(deltaTime);
+      particleSystemRef.current.update(deltaTime);
+
+      // Update entities
+      em.update(deltaTime, timestamp, deps.wave);
+
+      // Check collisions (pass shot count for deterministic UFO scoring)
+      const events = checkCollisions(
+        em.player,
+        em.aliens,
+        em.barriers,
+        em.projectiles,
+        em.ufo,
+        em.shotCount
+      );
+
+      // Handle events
+      let needsBump: boolean = deps.handleCollisionEvents(events);
+
+      // Check win condition
+      if (em.areAllAliensDestroyed()) {
+        deps.incrementWave();
+        deps.resetGame(false);
+        needsBump = true;
+      }
+
+      // Bump version if needed to trigger re-render
+      if (needsBump || events.length > 0) {
+        deps.bumpVersion();
+      }
+
+      // Continue loop
+      animationFrameRef.current = requestAnimationFrame(tick);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(animationFrameRef.current);
-  }, [status, update]);
-
-  // Memoize entities array based on version to avoid unnecessary recalculations
-  const entities = useMemo(
-    () => entityManagerRef.current.getAllEntities(),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [entitiesVersion]
-  );
-
-  // Memoize effect systems for stable references
-  const effectSystems = useMemo(
-    () => ({
-      particleSystem: particleSystemRef.current,
-      starfield: starfieldRef.current,
-      screenShake: screenShakeRef.current,
-      crtEffect: crtEffectRef.current,
-    }),
-    []
-  );
+  }, [status]);
 
   return {
     entities,
     entitiesVersion,
     notifications,
-    ...effectSystems,
+    particleSystem: effectSystems.particleSystem,
+    starfield: effectSystems.starfield,
+    screenShake: effectSystems.screenShake,
+    crtEffect: effectSystems.crtEffect,
     movePlayer,
     shoot,
     resetGame,
