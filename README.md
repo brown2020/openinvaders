@@ -354,3 +354,8 @@ If you enjoy this project:
 <div align="center">
   <sub>Built with ❤️ using Next.js 16.1, React 19.2, and Tailwind CSS 4.1</sub>
 </div>
+
+
+## CI secrets
+
+GitHub Actions must receive `OPENAI_API_KEY` only via `${{ secrets.OPENAI_API_KEY }}` (optional). Never commit API keys or `NEXT_PUBLIC_*` literals in workflows. The completion route defers client init and returns 503 when the secret is unset so CI stays green.

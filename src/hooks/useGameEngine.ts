@@ -25,18 +25,17 @@ export const useGameEngine = () => {
   const { status, wave, incrementScore, setStatus, setLives, incrementWave } =
     useGameStore();
 
-  // Game systems refs (class instances that are mutated by the game loop)
-  const entityManagerRef = useRef(new EntityManager());
+  // Stable engine instance (lazy useState — no per-render ctor, no render-time ref writes)
+  const [entityManager] = useState(() => new EntityManager());
+  const entityManagerRef = useRef(entityManager);
+  // Ref mirror for the rAF loop (written in effect, not during render)
+  useEffect(() => {
+    entityManagerRef.current = entityManager;
+  }, [entityManager]);
   const lastTimeRef = useRef<number>(0);
   const animationFrameRef = useRef<number>(0);
 
-  // Visual effects systems refs
-  const particleSystemRef = useRef(new ParticleSystem());
-  const starfieldRef = useRef(new Starfield());
-  const screenShakeRef = useRef(new ScreenShake());
-  const crtEffectRef = useRef(new CRTEffect());
-
-  // State-managed snapshots for render (avoids reading refs during render)
+  // Stable effect systems (lazy useState) + refs that point at them
   const [entities, setEntities] = useState<Entity[]>([]);
   const [effectSystems] = useState(() => ({
     particleSystem: new ParticleSystem(),
@@ -44,14 +43,9 @@ export const useGameEngine = () => {
     screenShake: new ScreenShake(),
     crtEffect: new CRTEffect(),
   }));
-
-  // Sync effect system state refs with the stable objects passed to render
-  useEffect(() => {
-    particleSystemRef.current = effectSystems.particleSystem;
-    starfieldRef.current = effectSystems.starfield;
-    screenShakeRef.current = effectSystems.screenShake;
-    crtEffectRef.current = effectSystems.crtEffect;
-  }, [effectSystems]);
+  const particleSystemRef = useRef(effectSystems.particleSystem);
+  const starfieldRef = useRef(effectSystems.starfield);
+  const screenShakeRef = useRef(effectSystems.screenShake);
 
   // Entity version for triggering re-renders
   const [entitiesVersion, setEntitiesVersion] = useState(0);

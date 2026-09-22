@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useCompletion } from "@ai-sdk/react";
-import { motion, AnimatePresence } from "framer-motion";
 import { Bot, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -29,7 +28,6 @@ const TacticalAdvisor: React.FC<TacticalAdvisorProps> = ({
   const [isMinimized, setIsMinimized] = useState(false);
   const hasApiKey = !error;
 
-  // Track previous values and current score for context messages
   const stateRef = useRef({
     wave,
     lives,
@@ -37,12 +35,10 @@ const TacticalAdvisor: React.FC<TacticalAdvisorProps> = ({
     score,
   });
 
-  // Keep score updated in ref
   useEffect(() => {
     stateRef.current.score = score;
   }, [score]);
 
-  // Trigger advice on significant events (wave change, life lost, game start)
   useEffect(() => {
     if (!hasApiKey) return;
 
@@ -65,72 +61,59 @@ const TacticalAdvisor: React.FC<TacticalAdvisorProps> = ({
       complete(context);
     }
 
-    // Update tracked state
     stateRef.current = { wave, lives, status: gameStatus, score: prev.score };
   }, [wave, lives, gameStatus, complete, isLoading, hasApiKey]);
 
-  // Don't render if no API key or error
   if (!hasApiKey) return null;
-
-  // Don't show during menu
   if (gameStatus === "MENU") return null;
 
   return (
     <div className="fixed bottom-4 right-4 z-50 max-w-xs pointer-events-none">
-      <AnimatePresence>
-        {!isMinimized && (completion || isLoading) && (
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="bg-slate-900/90 border border-blue-500/50 rounded-lg p-3 mb-2 backdrop-blur-sm pointer-events-auto shadow-lg shadow-blue-500/20"
-          >
-            <div className="flex items-start gap-2">
-              <div className="bg-blue-500/20 p-1.5 rounded-full shrink-0">
-                <Bot className="w-4 h-4 text-blue-400" />
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <h4 className="text-blue-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
-                    Tactical AI
-                    {isLoading && (
-                      <Sparkles className="w-3 h-3 animate-pulse" />
-                    )}
-                  </h4>
-                  <button
-                    onClick={() => setIsMinimized(true)}
-                    className="text-blue-400/50 hover:text-blue-400 transition-colors"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-                <p className="text-blue-100/90 text-xs leading-relaxed">
-                  {completion || "Analyzing battle conditions..."}
-                </p>
-              </div>
+      {!isMinimized && (completion || isLoading) && (
+        <div className="bg-slate-900/90 border border-blue-500/50 rounded-lg p-3 mb-2 backdrop-blur-sm pointer-events-auto shadow-lg shadow-blue-500/20 animate-overlay-fade-in">
+          <div className="flex items-start gap-2">
+            <div className="bg-blue-500/20 p-1.5 rounded-full shrink-0">
+              <Bot className="w-4 h-4 text-blue-400" aria-hidden="true" />
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
-      {/* Minimized button */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <h4 className="text-blue-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                  Tactical AI
+                  {isLoading && (
+                    <Sparkles className="w-3 h-3 animate-pulse" aria-hidden="true" />
+                  )}
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setIsMinimized(true)}
+                  className="text-blue-400/50 hover:text-blue-400 transition-colors"
+                  aria-label="Minimize tactical advisor"
+                >
+                  <X className="w-3 h-3" aria-hidden="true" />
+                </button>
+              </div>
+              <p className="text-blue-100/90 text-xs leading-relaxed">
+                {completion || "Analyzing battle conditions..."}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isMinimized && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex justify-end pointer-events-auto"
-        >
+        <div className="flex justify-end pointer-events-auto">
           <Button
             variant="ghost"
             size="sm"
             className="text-blue-500/70 hover:text-blue-400 hover:bg-blue-500/10 text-xs"
             onClick={() => setIsMinimized(false)}
+            aria-label="Show tactical advisor"
           >
-            <Bot className="w-4 h-4 mr-1" />
+            <Bot className="w-4 h-4 mr-1" aria-hidden="true" />
             Show AI
           </Button>
-        </motion.div>
+        </div>
       )}
     </div>
   );

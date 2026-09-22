@@ -261,3 +261,44 @@ button:active {
   background: rgba(0, 255, 136, 0.3);
   color: #ffffff;
 }
+
+
+/* until-100 a11y motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes score-float {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1.4);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-60px) scale(0.85);
+  }
+}
+
+.animate-score-float {
+  animation: score-float 0.8s ease-out forwards;
+}
+
+@keyframes overlay-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-overlay-fade-in {
+  animation: overlay-fade-in 0.2s ease-out;
+}
