@@ -1,74 +1,79 @@
 # Open Invaders
 
-A browser-based remake of the classic Space Invaders arcade game. Play waves of pixel aliens, hide behind destructible barriers, chase mystery UFO bonuses, and (optionally) get short tactical tips from an AI advisor. Live demo: [openinvaders.vercel.app](https://openinvaders.vercel.app/).
+A browser remake of Space Invaders. Clear waves of pixel aliens, shelter behind destructible barriers, catch the mystery UFO, and optionally receive short tactical tips from an AI advisor. Live demo: [openinvaders.vercel.app](https://openinvaders.vercel.app/).
 
 ## Features
 
-Verified from the current codebase:
-
-- Classic Space Invaders loop: player ship, 5×11 alien grid, four destructible barriers, progressive waves
-- Mystery UFO with deterministic score table (original-style shot-count scoring)
-- Combo scoring (kills within 1s stack up to 10× with a 10% bonus per level)
-- Extra life at the configured score threshold
-- Persistent high score and sound preference (Zustand + `localStorage`)
-- Visual effects: parallax starfield, particle explosions, CRT scanlines/vignette, glow, screen shake
-- Web Audio API 8-bit sound (march cycle, shots, explosions, extra life) — no external audio files
-- Keyboard controls (←/→ or A/D, Space to shoot, P/Esc pause, R restart) and on-screen touch controls
-- Optional AI tactical advisor (`POST /api/completion`) via Vercel AI SDK + OpenAI GPT-4o; soft-degrades when no API key is set
+- 5×11 alien grid, four destructible barriers, and waves that speed up as aliens are destroyed
+- One player shot on screen at a time, and at most three alien shots
+- Mystery UFO with a deterministic 15-entry score table based on the player shot count
+- Combo scoring: kills within 1 second stack up to 10×, adding 10% per combo level
+- Extra life at 1500 points, capped at 6 lives. Lives are one shared counter for the HUD and the ship
+- High score and mute preference persist in `localStorage`
+- Starfield, particles, CRT treatment, glow, and screen shake
+- Web Audio march cycle, shots, explosions, UFO warble, and extra-life sting
+- Keyboard and touch controls
+- Optional advisor at `POST /api/completion` (OpenAI GPT-4o through the Vercel AI SDK). The route accepts an allowlisted game event, not a free-form prompt
 
 ## Tech stack
 
-| Area | Choice | Version (package.json) |
-| --- | --- | --- |
-| Framework | Next.js (App Router) | ^16.3.6 |
-| UI | React | ^19.3.0 |
-| Language | TypeScript | ^6 |
-| Styling | Tailwind CSS + `@tailwindcss/postcss` | ^4.2.4 |
-| UI primitives | Radix UI (Dialog, Slot) + shadcn/ui-style components | — |
-| State | Zustand (with `persist` + `devtools`) | ^5.0.12 |
-| AI | Vercel AI SDK (`ai`, `@ai-sdk/openai`, `@ai-sdk/react`) | ai ^6.0.168 |
-| Validation | Zod | ^4.3.6 |
-| Icons | Lucide React | 1.8.0 |
-| Rendering | HTML5 Canvas (client-only game) | — |
-| Lint / test | ESLint 10, `tsx --test` | — |
+Ranges below match `package.json`.
 
-No Firebase, Stripe, or database — gameplay state is in-memory; high score/sound persist in the browser.
+| Area | Choice | package.json |
+| --- | --- | --- |
+| Framework | Next.js 16 (App Router, Turbopack) | `next` ^16.4.3 |
+| UI | React 19 | `react` / `react-dom` ^19.3.1 |
+| Language | TypeScript 7 compiler, TypeScript 6 API for ESLint and Next | `@typescript/native` npm:typescript@^7.0.2, `typescript` npm:@typescript/typescript6@^6.0.2 |
+| Styling | Tailwind CSS 4 | `tailwindcss` ^4.3.3 |
+| UI primitives | Radix Dialog and Slot, shadcn-style button | `@radix-ui/react-dialog` ^1.3.1 |
+| State | Zustand 5 (`persist` + `devtools`) | `zustand` ^5.0.16 |
+| AI | Vercel AI SDK and OpenAI provider. Model id stays `gpt-4o` | `ai` ^7.0.156, `@ai-sdk/openai` ^4.0.104, `@ai-sdk/react` ^4.0.160 |
+| Validation | Zod 4 | `zod` ^4.6.7 |
+| Icons | Lucide React (exact pin) | `lucide-react` 1.63.0 |
+| Lint / test | ESLint 10, Node’s test runner via `tsx` | `eslint` ^10.13.0, `tsx` ^4.23.15 |
+
+TypeScript 7.0 does not ship a compiler API. `npm run typecheck` runs the TypeScript 7 `tsc` binary. ESLint (`typescript-eslint`) and `next build` import the `typescript` package, which is aliased to `@typescript/typescript6` so those tools keep working. This is the side-by-side setup from the TypeScript 7.0 release.
+
+There is no Firebase, Stripe, database, or user account. Gameplay state is in memory. High score and sound preference stay in the browser.
 
 ## Project structure
 
 ```
 src/
   app/
-    layout.tsx              # Root layout, Press Start 2P font, metadata
-    page.tsx                # Dynamic import of Game (ssr: false)
-    api/completion/route.ts # Optional AI advisor stream
+    layout.tsx              # Root layout, Press Start 2P, metadata
+    page.tsx                # Client page; Game is loaded with ssr: false
+    api/completion/route.ts # Optional advisor
     globals.css
   components/
-    game/                   # Game, GameCanvas, HUD, Overlay, Controls, TacticalAdvisor, …
-    ui/                     # Button, Dialog (shadcn-style)
-  hooks/useGameEngine.ts    # Game loop, input → entity updates
+    game/                   # Canvas, HUD, overlay, controls, advisor
+    ui/                     # Button and dialog
+  hooks/useGameEngine.ts    # Game loop
   lib/
     entities/               # Player, Alien, Barrier, Projectile, UFO
     game/                   # EntityManager, CollisionManager
     effects/                # Particles, starfield, screen effects
     sounds/                 # Web Audio SoundManager
     store/game-store.ts     # Zustand store
-    completion/             # Request parsing + tests
-    constants/              # Game dimensions, scoring, colors
+    completion/             # Advisor schema, rate limit, origin check, tests
+    constants/              # Dimensions, scoring, colors
   types/game.ts
-docs/                       # Architecture notes
+docs/architecture.md        # Request and state map
+docs/budget.md              # Client JS size budget
+spec.md                     # Behavior as built
+roadmap.md                  # Next steps and known gaps
 .github/workflows/ci.yml
-ENV_TEMPLATE.md             # Lists OPENAI_API_KEY=
+ENV_TEMPLATE.md             # Env var name only
 ```
 
 ## Getting started
 
 ### Prerequisites
 
-- Node.js 22 (matches CI) or a current LTS
+- Node.js 22 (the version CI uses)
 - npm
 
-### Clone and install
+### Install
 
 ```bash
 git clone https://github.com/brown2020/openinvaders.git
@@ -78,21 +83,15 @@ npm install
 
 ### Environment variables
 
-Create `.env.local` only if you want the AI advisor. The game runs fully without it.
+The game runs with no environment variables. Set one only if you want the advisor to call OpenAI.
 
-| Name | Purpose | Where to get it |
+| Name | Required | Purpose |
 | --- | --- | --- |
-| `OPENAI_API_KEY` | Server-side key for `POST /api/completion` (GPT-4o tactical tips). Optional; without it the route returns a plain-text “Advisor offline” message. | [OpenAI API keys](https://platform.openai.com/api-keys) |
+| `OPENAI_API_KEY` | No | Server-only key for `POST /api/completion`. When it is unset, the route returns a short plain-text offline message and does not call OpenAI. |
 
-Template (also in `ENV_TEMPLATE.md`):
+Create `.env.local` for local development. `ENV_TEMPLATE.md` lists the name and nothing else. `.env` and `.env.*` are gitignored (`ENV_TEMPLATE.md` is not). Do not commit key material.
 
-```bash
-OPENAI_API_KEY=
-```
-
-Never commit real keys. `.env*.local` is gitignored.
-
-### Run locally
+### Run
 
 ```bash
 npm run dev
@@ -105,36 +104,39 @@ Open [http://localhost:3000](http://localhost:3000).
 | Input | Action |
 | --- | --- |
 | ← / → or A / D | Move |
-| Space | Shoot (or start / resume from menu / pause / game over) |
-| P or Esc | Pause / resume |
+| Space | Shoot. From the menu, pause screen, or game over, Space starts or resumes |
+| P or Esc | Pause or resume |
 | R | Restart |
-| Touch buttons | Move / shoot on mobile |
+| On-screen buttons | Move and shoot on a touch device |
+
+Leaving the window or cancelling a touch clears movement so the ship does not stick.
 
 ## Scripts
 
 | Script | Description |
 | --- | --- |
 | `npm run dev` | Next.js development server |
-| `npm run build` | Production build |
+| `npm run build` | Production build. Succeeds when `OPENAI_API_KEY` is unset |
 | `npm start` | Serve the production build |
 | `npm run lint` | ESLint |
-| `npm run typecheck` | `tsc --noEmit` |
-| `npm test` | Node test runner via `tsx --test` (`src/**/*.test.ts`) |
+| `npm run typecheck` | `tsc --noEmit` (TypeScript 7) |
+| `npm test` | `tsx --test src/**/*.test.ts` |
 
 ## Testing and CI
 
-- Unit tests cover completion request parsing and route security helpers under `src/lib/completion/`.
-- GitHub Actions workflow `.github/workflows/ci.yml` runs on pushes and PRs to `dev` and `main`: `npm ci` → lint → typecheck → test → build (Node 22). `OPENAI_API_KEY` is optional in CI via repository secrets.
+Tests cover the advisor allowlist, origin check, and rate limit, plus lives, the alien shot cap, combo points, and the player sprite. They do not drive the canvas.
+
+`.github/workflows/ci.yml` runs on pushes and pull requests to `dev` and `main`: `npm ci`, lint, typecheck, test, and build on Node 22. The build step does not receive secrets.
 
 ## Deployment
 
-Deployed as a standard Next.js app (demo on Vercel at [openinvaders.vercel.app](https://openinvaders.vercel.app/)). No `vercel.json` or Firebase config in-repo. If you enable the advisor in production, set `OPENAI_API_KEY` in the host’s environment / secrets — do not inline keys in the workflow or source.
+Standard Next.js app. The public demo is [openinvaders.vercel.app](https://openinvaders.vercel.app/). There is no `vercel.json` and no Firebase config in this repo. To enable the advisor in a host, set `OPENAI_API_KEY` in that host’s environment. Do not put the key in source or in the workflow file.
 
 ## Contributing
 
-1. Branch from `dev`.
-2. Keep changes focused; run `npm run lint`, `npm run typecheck`, and `npm test` before opening a PR.
-3. Do not commit secrets or `.env*.local` files.
+1. Branch from `dev`. `main` is updated separately after QA.
+2. Run `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build` before pushing.
+3. Do not commit secrets.
 
 ## License
 
