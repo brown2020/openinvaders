@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useCompletion } from "@ai-sdk/react";
 import { Bot, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { CompletionRequest } from "@/lib/completion/request";
 
 interface TacticalAdvisorProps {
   score: number;
@@ -13,7 +14,8 @@ interface TacticalAdvisorProps {
 }
 
 /**
- * AI-powered tactical advisor that provides gameplay tips
+ * AI-powered tactical advisor that provides gameplay tips.
+ * The server builds the prompt from an allowlisted event.
  */
 const TacticalAdvisor: React.FC<TacticalAdvisorProps> = ({
   score,
@@ -23,53 +25,57 @@ const TacticalAdvisor: React.FC<TacticalAdvisorProps> = ({
 }) => {
   const { completion, complete, isLoading, error } = useCompletion({
     api: "/api/completion",
+    streamProtocol: "text",
   });
 
   const [isMinimized, setIsMinimized] = useState(false);
-  const hasApiKey = !error;
-
+  const pendingRef = useRef<CompletionRequest | null>(null);
   const stateRef = useRef({
     wave,
     lives,
     status: gameStatus,
-    score,
   });
 
   useEffect(() => {
-    stateRef.current.score = score;
-  }, [score]);
-
-  useEffect(() => {
-    if (!hasApiKey) return;
-
     const prev = stateRef.current;
-    let shouldTrigger = false;
-    let context = "";
+    let event: CompletionRequest["event"] | null = null;
 
     if (gameStatus === "PLAYING" && prev.status !== "PLAYING") {
-      shouldTrigger = true;
-      context = "Game started. Give a brief, encouraging tactical tip.";
+      event = "game_start";
     } else if (wave > prev.wave) {
-      shouldTrigger = true;
-      context = `Wave ${wave} started! Score: ${prev.score}. Give a quick tip for this wave.`;
+      event = "wave_start";
     } else if (lives < prev.lives && lives > 0) {
-      shouldTrigger = true;
-      context = `Player lost a life! ${lives} lives remaining. Score: ${prev.score}. Give brief encouragement.`;
+      event = "life_lost";
     }
 
-    if (shouldTrigger && !isLoading) {
-      complete(context);
+    stateRef.current = { wave, lives, status: gameStatus };
+
+    if (event) {
+      pendingRef.current = { event, wave, lives, score };
     }
+  }, [wave, lives, gameStatus, score]);
 
-    stateRef.current = { wave, lives, status: gameStatus, score: prev.score };
-  }, [wave, lives, gameStatus, complete, isLoading, hasApiKey]);
+  useEffect(() => {
+    if (gameStatus !== "PLAYING") {
+      pendingRef.current = null;
+      return;
+    }
+    if (isLoading || !pendingRef.current) return;
 
-  if (!hasApiKey) return null;
+    const next = pendingRef.current;
+    pendingRef.current = null;
+    void complete("advice", { body: next });
+  }, [wave, lives, gameStatus, score, isLoading, complete]);
+
   if (gameStatus === "MENU") return null;
+
+  const message = error
+    ? "Advisor unavailable. It will try again on the next event."
+    : completion || (isLoading ? "Analyzing battle conditions..." : "");
 
   return (
     <div className="fixed bottom-4 right-4 z-50 max-w-xs pointer-events-none">
-      {!isMinimized && (completion || isLoading) && (
+      {!isMinimized && message && (
         <div className="bg-slate-900/90 border border-blue-500/50 rounded-lg p-3 mb-2 backdrop-blur-sm pointer-events-auto shadow-lg shadow-blue-500/20 animate-overlay-fade-in">
           <div className="flex items-start gap-2">
             <div className="bg-blue-500/20 p-1.5 rounded-full shrink-0">
@@ -93,9 +99,7 @@ const TacticalAdvisor: React.FC<TacticalAdvisorProps> = ({
                   <X className="w-3 h-3" aria-hidden="true" />
                 </button>
               </div>
-              <p className="text-blue-100/90 text-xs leading-relaxed">
-                {completion || "Analyzing battle conditions..."}
-              </p>
+              <p className="text-blue-100/90 text-xs leading-relaxed">{message}</p>
             </div>
           </div>
         </div>
