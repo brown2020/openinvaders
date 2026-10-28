@@ -29,5 +29,5 @@ jobs:
         env:
           # Optional AI advisor — never inline keys; tolerate missing secrets.
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        # Gate jobs tolerate missing secrets: deferred client init + 503 without key.
+        # Gate jobs tolerate missing secrets: deferred client init + plain-text 200 without key.
         # If NEXT_PUBLIC_* is added later, wire via ${{ secrets.* }} only — never literals.

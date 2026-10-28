@@ -31,7 +31,7 @@ Browser
 
 ## Server / client
 
-Interactive game is client-only (`"use client"` / dynamic ssr:false). The only route handler is `POST /api/completion` (optional). Secrets stay on the server (`OPENAI_API_KEY`). Invalid bodies → 400; missing key → 503; GET → 405.
+Interactive game is client-only (`"use client"` / dynamic ssr:false). The only route handler is `POST /api/completion` (optional). Secrets stay on the server (`OPENAI_API_KEY`). The handler accepts an allowlisted game event (not a free-form prompt), rate-limits callers, and caps `maxOutputTokens`. Cross-origin → 403; invalid bodies → 400; rate limit → 429; missing key → 200 plain text; provider failure → 500; GET → 405.
 
 ## Change exercises
 
