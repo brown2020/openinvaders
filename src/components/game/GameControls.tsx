@@ -126,12 +126,21 @@ const GameControls = memo<GameControlsProps>(
       }
     });
 
+    const stopMoving = useEffectEvent(() => {
+      onMoveLeft(false);
+      onMoveRight(false);
+    });
+
     useEffect(() => {
+      const onBlur = () => stopMoving();
       window.addEventListener("keydown", onKeyDown);
       window.addEventListener("keyup", onKeyUp);
+      window.addEventListener("blur", onBlur);
       return () => {
         window.removeEventListener("keydown", onKeyDown);
         window.removeEventListener("keyup", onKeyUp);
+        window.removeEventListener("blur", onBlur);
+        stopMoving();
       };
     }, []);
 
@@ -216,6 +225,7 @@ const GameControls = memo<GameControlsProps>(
               className={TOUCH_BUTTON_CLASS}
               onTouchStart={() => handleTouchStart("left")}
               onTouchEnd={() => handleTouchEnd("left")}
+              onTouchCancel={() => handleTouchEnd("left")}
               onContextMenu={(e) => e.preventDefault()}
               aria-label="Move left"
             >
@@ -237,6 +247,7 @@ const GameControls = memo<GameControlsProps>(
               className={TOUCH_BUTTON_CLASS}
               onTouchStart={() => handleTouchStart("right")}
               onTouchEnd={() => handleTouchEnd("right")}
+              onTouchCancel={() => handleTouchEnd("right")}
               onContextMenu={(e) => e.preventDefault()}
               aria-label="Move right"
             >
