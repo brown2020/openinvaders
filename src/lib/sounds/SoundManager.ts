@@ -97,6 +97,22 @@ function playSynthSound(config: SoundConfig): void {
 // UFO flying sound state
 let ufoOscillator: OscillatorNode | null = null;
 let ufoGain: GainNode | null = null;
+let ufoLfo: OscillatorNode | null = null;
+let ufoLfoGain: GainNode | null = null;
+
+function stopAudioNode(node: OscillatorNode | GainNode | null): void {
+  if (!node) return;
+  try {
+    if ("stop" in node) node.stop();
+  } catch {
+    // Already stopped.
+  }
+  try {
+    node.disconnect();
+  } catch {
+    // Already disconnected.
+  }
+}
 
 /**
  * Start continuous UFO flying sound
@@ -125,6 +141,9 @@ function startUfoSound(): void {
   ufoGain.gain.setValueAtTime(volume * 0.3, ctx.currentTime);
   ufoGain.connect(ctx.destination);
 
+  ufoLfo = lfo;
+  ufoLfoGain = lfoGain;
+
   lfo.start();
   ufoOscillator.start();
 }
@@ -133,15 +152,14 @@ function startUfoSound(): void {
  * Stop UFO flying sound
  */
 function stopUfoSound(): void {
-  if (ufoOscillator) {
-    ufoOscillator.stop();
-    ufoOscillator.disconnect();
-    ufoOscillator = null;
-  }
-  if (ufoGain) {
-    ufoGain.disconnect();
-    ufoGain = null;
-  }
+  stopAudioNode(ufoOscillator);
+  ufoOscillator = null;
+  stopAudioNode(ufoLfo);
+  ufoLfo = null;
+  stopAudioNode(ufoGain);
+  ufoGain = null;
+  stopAudioNode(ufoLfoGain);
+  ufoLfoGain = null;
 }
 
 export const soundManager = {

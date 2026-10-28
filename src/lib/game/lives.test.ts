@@ -4,6 +4,7 @@ import { Player } from "@/lib/entities/player";
 import { Projectile } from "@/lib/entities/projectile";
 import { EntityManager } from "@/lib/game/EntityManager";
 import { checkCollisions } from "@/lib/game/CollisionManager";
+import { PROJECTILE } from "@/lib/constants/game";
 
 describe("shared lives counter", () => {
   it("does not spend a life inside collision detection", () => {
@@ -39,4 +40,19 @@ describe("shared lives counter", () => {
     assert.equal(manager.player.lives, 3);
   });
 
+  it("never spawns more alien shots than the cap in one frame", () => {
+    const manager = new EntityManager();
+    const random = Math.random;
+    Math.random = () => 0;
+    try {
+      manager.update(16, 0, 1);
+      const alienShots = manager.projectiles.filter(
+        (projectile) => !projectile.isPlayerProjectile
+      );
+      assert.equal(alienShots.length, PROJECTILE.CAPS.ALIEN_MAX);
+    } finally {
+      Math.random = random;
+      manager.reset(true, 3);
+    }
+  });
 });

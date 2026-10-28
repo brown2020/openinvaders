@@ -150,7 +150,7 @@ export class EntityManager {
   }
 
   private updateAliens(deltaTime: number, wave: number): void {
-    const alienShots = this.projectiles.filter(
+    let alienShots = this.projectiles.filter(
       (p) => !p.isPlayerProjectile
     ).length;
 
@@ -169,6 +169,7 @@ export class EntityManager {
           alienShots < PROJECTILE.CAPS.ALIEN_MAX
         ) {
           this.projectiles.push(alien.shoot());
+          alienShots += 1;
           soundManager.play(SoundType.SHOOT);
         }
       }
@@ -287,6 +288,7 @@ export class EntityManager {
     this.aliens = this.createAliens();
     this.projectiles = [];
     this.ufo = null;
+    soundManager.stop(SoundType.UFO_FLYING);
     this.nextUfoSpawnTime = this.getNextUfoSpawnTime();
     alienFormation.reset();
     soundManager.resetMarchCycle();
