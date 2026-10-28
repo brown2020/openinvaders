@@ -14,11 +14,11 @@ import { renderPixelArt, drawGlow } from "@/lib/utils/canvas";
 
 // Authentic Space Invaders cannon pattern (13x8 original, padded to 16x8)
 // The original cannon had a distinctive narrow top and wide base
-const PLAYER_PIXELS = [
+export const PLAYER_PIXELS = [
   "      ##        ",
   "     ####       ",
   "     ####       ",
-  " ############ ## ",
+  " ############ ##",
   "################",
   "################",
   "################",
