@@ -274,14 +274,16 @@ export class EntityManager {
   }
 
   /**
-   * Reset entities for new wave or game restart
+   * Reset entities for new wave or game restart.
+   * `lives` is the store's current count so a new ship does not jump back to 3.
    */
-  reset(fullReset: boolean = false): void {
+  reset(fullReset: boolean = false, lives: number = PLAYER.INITIAL_LIVES): void {
     if (fullReset) {
       this.barriers = this.createBarriers();
     }
 
     this.player = this.createPlayer();
+    this.player.lives = lives;
     this.aliens = this.createAliens();
     this.projectiles = [];
     this.ufo = null;

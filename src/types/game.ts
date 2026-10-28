@@ -61,7 +61,6 @@ export type CollisionEvent =
     }
   | {
       type: "PLAYER_HIT";
-      payload: { lives: number };
       position: Position;
     }
   | {
@@ -117,9 +116,11 @@ export interface GameState {
  */
 export interface GameActions {
   setStatus: (status: GameStatus) => void;
-  incrementScore: (points: number) => void;
+  incrementScore: (points: number) => number;
   incrementWave: () => void;
   setLives: (lives: number) => void;
+  /** Decrease the shared life counter by one and return the remaining lives. */
+  loseLife: () => number;
   toggleSound: () => void;
   resetGame: () => void;
 }

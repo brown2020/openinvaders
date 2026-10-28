@@ -22,7 +22,7 @@ import type { Entity } from "@/lib/entities/entity";
  * Core game engine hook that manages game state, updates, and rendering
  */
 export const useGameEngine = () => {
-  const { status, wave, incrementScore, setStatus, setLives, incrementWave } =
+  const { status, wave, incrementScore, setStatus, loseLife, incrementWave } =
     useGameStore();
 
   // Stable engine instance (lazy useState — no per-render ctor, no render-time ref writes)
@@ -93,8 +93,9 @@ export const useGameEngine = () => {
       for (const event of events) {
         switch (event.type) {
           case "ALIEN_KILLED": {
-            incrementScore(event.points);
-            addNotification(event.points, event.position.x, event.position.y);
+            const awarded = incrementScore(event.points);
+            entityManagerRef.current.player.lives = useGameStore.getState().lives;
+            addNotification(awarded, event.position.x, event.position.y);
 
             // Create explosion particles using shared color mapping
             particleSystemRef.current.createExplosion(
@@ -113,8 +114,9 @@ export const useGameEngine = () => {
           }
 
           case "UFO_KILLED": {
-            incrementScore(event.points);
-            addNotification(event.points, event.position.x, event.position.y);
+            const awarded = incrementScore(event.points);
+            entityManagerRef.current.player.lives = useGameStore.getState().lives;
+            addNotification(awarded, event.position.x, event.position.y);
 
             // Big explosion for UFO
             particleSystemRef.current.createExplosion(
@@ -134,7 +136,8 @@ export const useGameEngine = () => {
           }
 
           case "PLAYER_HIT": {
-            setLives(event.payload.lives);
+            const lives = loseLife();
+            entityManagerRef.current.player.lives = lives;
 
             // Create hit particles
             particleSystemRef.current.createSparkBurst(
@@ -147,6 +150,12 @@ export const useGameEngine = () => {
               SCREEN_SHAKE.PLAYER_HIT_DURATION
             );
             soundManager.play(SoundType.PLAYER_HIT);
+
+            if (lives <= 0) {
+              setStatus("GAME_OVER");
+              soundManager.stop(SoundType.UFO_FLYING);
+              soundManager.play(SoundType.GAME_OVER);
+            }
             break;
           }
 
@@ -175,7 +184,7 @@ export const useGameEngine = () => {
 
       return needsBump;
     },
-    [incrementScore, setLives, setStatus, addNotification]
+    [incrementScore, loseLife, setStatus, addNotification]
   );
 
   /**
@@ -183,7 +192,10 @@ export const useGameEngine = () => {
    */
   const resetGame = useCallback(
     (fullReset = false) => {
-      entityManagerRef.current.reset(fullReset);
+      entityManagerRef.current.reset(
+        fullReset,
+        useGameStore.getState().lives
+      );
       particleSystemRef.current.clear();
       screenShakeRef.current.reset();
       starfieldRef.current.reset();

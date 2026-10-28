@@ -113,25 +113,20 @@ function checkAlienProjectileHits(
   barriers: Barrier[],
   events: CollisionEvent[]
 ): void {
-  // Check player hit (skip if invincible)
+  // Check player hit (skip if invincible).
+  // Lives live on the store; the engine applies the hit and decides game over.
   if (!player.isInvincible() && projectile.collidesWith(player)) {
     projectile.isActive = false;
-    player.lives--;
     player.triggerHitEffect();
     player.setInvincible(1500); // 1.5 second invincibility
 
     events.push({
       type: "PLAYER_HIT",
-      payload: { lives: player.lives },
       position: {
         x: player.position.x + player.dimensions.width / 2,
         y: player.position.y,
       },
     });
-
-    if (player.lives <= 0) {
-      events.push({ type: "GAME_OVER" });
-    }
     return;
   }
 

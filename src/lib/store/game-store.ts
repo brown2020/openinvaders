@@ -29,7 +29,8 @@ export const useGameStore = create<GameStore>()(
         // Actions
         setStatus: (status) => set({ status }),
 
-        incrementScore: (points) =>
+        incrementScore: (points) => {
+          let awarded = 0;
           set((state) => {
             const now = Date.now();
             const timeSinceLastKill = now - state.lastKillTime;
@@ -45,8 +46,8 @@ export const useGameStore = create<GameStore>()(
               newCombo = 1;
             }
 
-            const totalPoints = Math.floor(points * bonusMultiplier);
-            const newScore = state.score + totalPoints;
+            awarded = Math.floor(points * bonusMultiplier);
+            const newScore = state.score + awarded;
 
             // Check for extra life at threshold (original game feature)
             let newLives = state.lives;
@@ -69,7 +70,9 @@ export const useGameStore = create<GameStore>()(
               lives: newLives,
               extraLifeAwarded,
             };
-          }),
+          });
+          return awarded;
+        },
 
         incrementWave: () =>
           set((state) => ({
@@ -78,6 +81,15 @@ export const useGameStore = create<GameStore>()(
           })),
 
         setLives: (lives) => set({ lives }),
+
+        loseLife: () => {
+          let remaining = 0;
+          set((state) => {
+            remaining = Math.max(0, state.lives - 1);
+            return { lives: remaining };
+          });
+          return remaining;
+        },
 
         toggleSound: () =>
           set((state) => ({ isSoundEnabled: !state.isSoundEnabled })),
