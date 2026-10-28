@@ -1,6 +1,6 @@
 // src/components/game/GameOverlay.tsx
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ALIEN } from "@/lib/constants/game";
 import { AlienType, GameStatus } from "@/types/game";
@@ -37,26 +37,26 @@ const GameOverlay: React.FC<GameOverlayProps> = ({
 
   const dialogRef = useRef<HTMLDialogElement>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
+
     if (gameState === "PLAYING") {
       if (dialog.open) dialog.close();
       return;
     }
-    if (!dialog.open) {
-      dialog.showModal();
-    }
-  }, [gameState]);
 
-  if (gameState === "PLAYING") {
-    return null;
-  }
+    if (!dialog.open) dialog.showModal();
+
+    return () => {
+      if (dialog.open) dialog.close();
+    };
+  }, [gameState]);
 
   return (
     <dialog
       ref={dialogRef}
-      className="absolute inset-0 m-0 w-full h-full max-w-none max-h-none bg-slate-950/90 backdrop-blur-sm flex items-center justify-center rounded-lg animate-overlay-fade-in border-0 p-0 open:flex"
+      className="absolute inset-0 m-0 w-full h-full max-w-none max-h-none bg-slate-950/90 backdrop-blur-sm open:flex items-center justify-center rounded-lg animate-overlay-fade-in border-0 p-0"
       aria-label={
         gameState === "MENU"
           ? "Main menu"
