@@ -24,11 +24,11 @@ Object.defineProperty(globalThis, "localStorage", {
   },
 });
 
-let useGameStore: typeof import("./game-store.ts").useGameStore;
+let useGameStore: typeof import("./game-store").useGameStore;
 
 describe("life and score counter", () => {
   before(async () => {
-    ({ useGameStore } = await import("./game-store.ts"));
+    ({ useGameStore } = await import("./game-store"));
   });
 
   beforeEach(() => {

@@ -41,7 +41,7 @@ describe("completion route security", () => {
   });
 
   it("rejects cross-origin and free-form prompts before calling the model", async () => {
-    const { POST, GET } = await import("../../app/api/completion/route.ts");
+    const { POST, GET } = await import("../../app/api/completion/route");
 
     const getResponse = await GET();
     assert.equal(getResponse.status, 405);
@@ -90,7 +90,7 @@ describe("completion route security", () => {
       return;
     }
 
-    const { POST } = await import("../../app/api/completion/route.ts");
+    const { POST } = await import("../../app/api/completion/route");
     const call = () =>
       POST(
         new Request("http://localhost/api/completion", {

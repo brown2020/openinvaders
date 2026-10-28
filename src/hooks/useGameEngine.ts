@@ -16,6 +16,7 @@ import { ScoreNotification, CollisionEvent } from "@/types/game";
 import { ALIEN_TYPE_COLORS, GAME_COLORS } from "@/lib/constants/colors";
 import { SCREEN_SHAKE } from "@/lib/constants/effects";
 import { checkCollisions } from "@/lib/game/CollisionManager";
+
 /**
  * Core game engine hook that manages game state, updates, and rendering
  */
