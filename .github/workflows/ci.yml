@@ -26,8 +26,5 @@ jobs:
         run: npm test
       - name: Build
         run: npm run build
-        env:
-          # Optional AI advisor — never inline keys; tolerate missing secrets.
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        # Gate jobs tolerate missing secrets: deferred client init + plain-text 200 without key.
-        # If NEXT_PUBLIC_* is added later, wire via ${{ secrets.* }} only — never literals.
+        # Production build must succeed with no secrets. OPENAI_API_KEY is read
+        # only at request time inside the advisor route.
