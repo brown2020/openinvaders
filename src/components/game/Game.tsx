@@ -29,7 +29,7 @@ const Game: React.FC = () => {
   } = useGameStore();
 
   const {
-    entities,
+    getEntities,
     entitiesVersion,
     notifications,
     particleSystem,
@@ -67,7 +67,7 @@ const Game: React.FC = () => {
       {/* Game Container */}
       <div className="relative">
         <GameCanvas
-          entities={entities}
+          getEntities={getEntities}
           particleSystem={particleSystem}
           starfield={starfield}
           screenShake={screenShake}

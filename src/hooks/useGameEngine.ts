@@ -16,8 +16,6 @@ import { ScoreNotification, CollisionEvent } from "@/types/game";
 import { ALIEN_TYPE_COLORS, GAME_COLORS } from "@/lib/constants/colors";
 import { SCREEN_SHAKE } from "@/lib/constants/effects";
 import { checkCollisions } from "@/lib/game/CollisionManager";
-import type { Entity } from "@/lib/entities/entity";
-
 /**
  * Core game engine hook that manages game state, updates, and rendering
  */
@@ -36,7 +34,6 @@ export const useGameEngine = () => {
   const animationFrameRef = useRef<number>(0);
 
   // Stable effect systems (lazy useState) + refs that point at them
-  const [entities, setEntities] = useState<Entity[]>([]);
   const [effectSystems] = useState(() => ({
     particleSystem: new ParticleSystem(),
     starfield: new Starfield(),
@@ -51,10 +48,11 @@ export const useGameEngine = () => {
   const [entitiesVersion, setEntitiesVersion] = useState(0);
   const bumpVersion = useCallback(() => setEntitiesVersion((v) => v + 1), []);
 
-  // Update entities snapshot when version changes
-  useEffect(() => {
-    setEntities(entityManagerRef.current.getAllEntities());
-  }, [entitiesVersion]);
+  // Canvas reads this every frame so new shots and UFOs are visible immediately.
+  const getEntities = useCallback(
+    () => entityManagerRef.current.getAllEntities(),
+    []
+  );
 
   // Score notifications for floating score popups
   const [notifications, setNotifications] = useState<ScoreNotification[]>([]);
@@ -320,7 +318,7 @@ export const useGameEngine = () => {
   }, [status]);
 
   return {
-    entities,
+    getEntities,
     entitiesVersion,
     notifications,
     particleSystem: effectSystems.particleSystem,

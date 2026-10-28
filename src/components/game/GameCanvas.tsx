@@ -12,7 +12,7 @@ import {
 import { GAME_COLORS } from "@/lib/constants/colors";
 
 interface GameCanvasProps {
-  entities: Entity[];
+  getEntities: () => Entity[];
   particleSystem: ParticleSystem;
   starfield: Starfield;
   screenShake: ScreenShake;
@@ -33,7 +33,7 @@ const CORNER_SIZE = 20;
  * Main game canvas component with visual effects
  */
 const GameCanvas: React.FC<GameCanvasProps> = ({
-  entities,
+  getEntities,
   particleSystem,
   starfield,
   screenShake,
@@ -155,7 +155,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
 
   // Store render dependencies in a ref so the render loop can read latest values
   const renderDepsRef = useRef({
-    entities,
+    getEntities,
     particleSystem,
     starfield,
     screenShake,
@@ -164,7 +164,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
   });
   useEffect(() => {
     renderDepsRef.current = {
-      entities,
+      getEntities,
       particleSystem,
       starfield,
       screenShake,
@@ -202,9 +202,10 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.drawImage(gridCanvasRef.current, 0, 0);
       }
 
-      // Render all entities
-      for (let i = 0; i < deps.entities.length; i++) {
-        const entity = deps.entities[i];
+      // Live lists, so shots and UFOs spawned since the last React render are drawn.
+      const entities = deps.getEntities();
+      for (let i = 0; i < entities.length; i++) {
+        const entity = entities[i];
         if (!entity.isDestroyed && entity.isActive) {
           entity.render(ctx);
         }
