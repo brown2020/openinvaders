@@ -7,9 +7,9 @@ Punchlist after the dependency maintenance pass. There are no open GitHub issues
 1. QA the play loop on desktop and a phone: move, single shot, pause, restart, extra life at 1500, wave clear keeping the current life total, UFO visible without firing first, and alien shots visible before they hit.
 2. Decide whether the advisor should stay on in the public demo. If yes, set `OPENAI_API_KEY` on the host. The repo and CI build do not need it.
 3. Replace the in-process advisor rate limit with a shared limiter if the key is enabled in production. The current ceilings (8/minute per address, 30/minute per instance) reset on every new server instance.
-4. Add a browser test for start, shoot, pause, and game over. Unit tests do not mount the canvas.
+4. Add a browser test that mounts the canvas for start, shoot, pause, and game over. Unit tests cover the status machine and the single-shot cap, and they do not mount the canvas.
 5. Scale or letterbox the 800×600 canvas on narrow screens. It is a fixed pixel surface today.
-6. When `typescript-eslint` supports TypeScript 7.1’s compiler API, drop the `@typescript/typescript6` alias and point `typescript` at TypeScript 7 directly.
+6. When `typescript-eslint` supports TypeScript 7’s compiler API, drop the `@typescript/typescript6` alias and point `typescript` at TypeScript 7 directly. TypeScript 7.1 is still a beta (`7.1.0-beta`); the stable compiler is 7.0.2. `typescript-eslint` 8.72.1 still peers `typescript` `<6.1.0`, so the alias stays. Next.js 16.5 is canary-only; the stable release stays 16.4.3.
 
 ## Known gaps
 
@@ -20,6 +20,7 @@ Punchlist after the dependency maintenance pass. There are no open GitHub issues
 - High score and mute are local to the browser. Clearing site data clears them. There is no server copy.
 - Hiding the tab does not clear movement unless the window also blurs.
 - Score popups use canvas coordinates. They line up with the unscaled 800×600 canvas and will drift if that canvas is later CSS-scaled without a matching transform.
+- `minimatch` 3.1.5 stays under `eslint-plugin-import`, `eslint-plugin-react`, and `eslint-plugin-jsx-a11y`. Those plugins call the v3 default export and `makeRe()`, which minimatch 11 removed. The 10.x copies used by ESLint, `@eslint/config-array`, and `@typescript-eslint/typescript-estree` are overridden to 11.0.4.
 
 ## Not in this repo
 

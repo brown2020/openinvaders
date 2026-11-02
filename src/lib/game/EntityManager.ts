@@ -199,6 +199,23 @@ export class EntityManager {
   }
 
   /**
+   * Fire the player's cannon when the on-screen cap allows it.
+   * Returns the shot, or null when one is already in flight or the cannon is cooling down.
+   */
+  tryPlayerShot(): Projectile | null {
+    const playerShots = this.projectiles.filter(
+      (projectile) => projectile.isPlayerProjectile
+    ).length;
+    if (playerShots >= PROJECTILE.CAPS.PLAYER_MAX) return null;
+
+    const projectile = this.player.shoot();
+    if (!projectile) return null;
+
+    this.addProjectile(projectile);
+    return projectile;
+  }
+
+  /**
    * Add a projectile to the game
    * Tracks player shot count for deterministic UFO scoring
    */

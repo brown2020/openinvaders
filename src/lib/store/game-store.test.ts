@@ -54,6 +54,50 @@ describe("life and score counter", () => {
     assert.equal(useGameStore.getState().lives, 2);
   });
 
+  it("starts, pauses, ends, and restarts without dropping the high score", () => {
+    useGameStore.setState({
+      status: "MENU",
+      score: 250,
+      highScore: 400,
+      wave: 4,
+      lives: 1,
+      isSoundEnabled: true,
+      combo: 3,
+      lastKillTime: 1,
+      extraLifeAwarded: true,
+    });
+
+    useGameStore.getState().resetGame();
+    const playing = useGameStore.getState();
+    assert.equal(playing.status, "PLAYING");
+    assert.equal(playing.score, 0);
+    assert.equal(playing.wave, 1);
+    assert.equal(playing.lives, 3);
+    assert.equal(playing.combo, 0);
+    assert.equal(playing.lastKillTime, 0);
+    assert.equal(playing.extraLifeAwarded, false);
+    assert.equal(playing.highScore, 400);
+    assert.equal(playing.isSoundEnabled, true);
+
+    useGameStore.getState().setStatus("PAUSED");
+    assert.equal(useGameStore.getState().status, "PAUSED");
+    assert.equal(useGameStore.getState().score, 0);
+
+    useGameStore.getState().setStatus("PLAYING");
+    useGameStore.getState().setStatus("GAME_OVER");
+    assert.equal(useGameStore.getState().status, "GAME_OVER");
+    assert.equal(useGameStore.getState().highScore, 400);
+
+    useGameStore.getState().resetGame();
+    assert.equal(useGameStore.getState().status, "PLAYING");
+    assert.equal(useGameStore.getState().score, 0);
+    assert.equal(useGameStore.getState().lives, 3);
+    assert.equal(useGameStore.getState().highScore, 400);
+
+    useGameStore.getState().toggleSound();
+    assert.equal(useGameStore.getState().isSoundEnabled, false);
+  });
+
   it("returns combo-adjusted points and stops at zero lives", () => {
     useGameStore.getState().incrementScore(10);
     const comboAward = useGameStore.getState().incrementScore(10);

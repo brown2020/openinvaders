@@ -5,7 +5,6 @@ import { EntityManager } from "@/lib/game/EntityManager";
 import { useGameStore } from "@/lib/store/game-store";
 import { soundManager } from "@/lib/sounds/SoundManager";
 import { SoundType } from "@/lib/sounds/SoundTypes";
-import { PROJECTILE } from "@/lib/constants/game";
 import {
   ParticleSystem,
   Starfield,
@@ -245,18 +244,10 @@ export const useGameEngine = () => {
   const shoot = useCallback(() => {
     if (status !== "PLAYING") return;
 
-    const em = entityManagerRef.current;
-    const playerShots = em.projectiles.filter(
-      (p) => p.isPlayerProjectile
-    ).length;
-
-    if (playerShots < PROJECTILE.CAPS.PLAYER_MAX) {
-      const projectile = em.player.shoot();
-      if (projectile) {
-        em.addProjectile(projectile);
-        soundManager.play(SoundType.SHOOT);
-        bumpVersion();
-      }
+    const projectile = entityManagerRef.current.tryPlayerShot();
+    if (projectile) {
+      soundManager.play(SoundType.SHOOT);
+      bumpVersion();
     }
   }, [status, bumpVersion]);
 

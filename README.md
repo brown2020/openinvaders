@@ -27,10 +27,10 @@ Ranges below match `package.json`.
 | Styling | Tailwind CSS 4 | `tailwindcss` ^4.3.3 |
 | UI primitives | Radix Dialog and Slot, shadcn-style button | `@radix-ui/react-dialog` ^1.3.1 |
 | State | Zustand 5 (`persist` + `devtools`) | `zustand` ^5.0.16 |
-| AI | Vercel AI SDK and OpenAI provider. Model id stays `gpt-4o` | `ai` ^7.0.156, `@ai-sdk/openai` ^4.0.104, `@ai-sdk/react` ^4.0.160 |
+| AI | Vercel AI SDK and OpenAI provider. Model id stays `gpt-4o` | `ai` ^7.0.159, `@ai-sdk/openai` ^4.0.106, `@ai-sdk/react` ^4.0.163 |
 | Validation | Zod 4 | `zod` ^4.6.7 |
-| Icons | Lucide React (exact pin) | `lucide-react` 1.63.0 |
-| Lint / test | ESLint 10, Node’s test runner via `tsx` | `eslint` ^10.13.0, `tsx` ^4.23.15 |
+| Icons | Lucide React (exact pin) | `lucide-react` 1.66.0 |
+| Lint / test | ESLint 10, Node’s test runner via `tsx` | `eslint` ^10.14.0, `tsx` ^4.23.15 |
 
 TypeScript 7.0 does not ship a compiler API. `npm run typecheck` runs the TypeScript 7 `tsc` binary. ESLint (`typescript-eslint`) and `next build` import the `typescript` package, which is aliased to `@typescript/typescript6` so those tools keep working. This is the side-by-side setup from the TypeScript 7.0 release.
 
@@ -70,7 +70,7 @@ ENV_TEMPLATE.md             # Env var name only
 
 ### Prerequisites
 
-- Node.js 22 (the version CI uses)
+- Node.js 24 (the version CI uses)
 - npm
 
 ### Install
@@ -126,7 +126,7 @@ Leaving the window or cancelling a touch clears movement so the ship does not st
 
 Tests cover the advisor allowlist, origin check, and rate limit, plus lives, the alien shot cap, combo points, and the player sprite. They do not drive the canvas.
 
-`.github/workflows/ci.yml` runs on pushes and pull requests to `dev` and `main`: `npm ci`, lint, typecheck, test, and build on Node 22. The build step does not receive secrets.
+`.github/workflows/ci.yml` runs on pushes and pull requests to `dev` and `main`: `npm ci`, lint, typecheck, test, and build on Node 24. The build step does not receive secrets.
 
 ## Deployment
 
