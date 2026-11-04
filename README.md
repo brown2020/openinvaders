@@ -21,18 +21,18 @@ Ranges below match `package.json`.
 
 | Area | Choice | package.json |
 | --- | --- | --- |
-| Framework | Next.js 16 (App Router, Turbopack) | `next` ^16.4.3 |
+| Framework | Next.js 16 (App Router, Turbopack) | `next` ^16.4.5 |
 | UI | React 19 | `react` / `react-dom` ^19.3.1 |
-| Language | TypeScript 7 compiler, TypeScript 6 API for ESLint and Next | `@typescript/native` npm:typescript@^7.0.2, `typescript` npm:@typescript/typescript6@^6.0.2 |
-| Styling | Tailwind CSS 4 | `tailwindcss` ^4.3.3 |
+| Language | TypeScript 6.0.3. TypeScript 7 still has no compiler API, so ESLint and Next keep importing this package | `typescript` 6.0.3 |
+| Styling | Tailwind CSS 4 | `tailwindcss` ^4.3.4 |
 | UI primitives | Radix Dialog and Slot, shadcn-style button | `@radix-ui/react-dialog` ^1.3.1 |
 | State | Zustand 5 (`persist` + `devtools`) | `zustand` ^5.0.16 |
-| AI | Vercel AI SDK and OpenAI provider. Model id stays `gpt-4o` | `ai` ^7.0.159, `@ai-sdk/openai` ^4.0.106, `@ai-sdk/react` ^4.0.163 |
+| AI | Vercel AI SDK and OpenAI provider. Model id stays `gpt-4o` | `ai` ^7.0.162, `@ai-sdk/openai` ^4.0.108, `@ai-sdk/react` ^4.0.166 |
 | Validation | Zod 4 | `zod` ^4.6.7 |
-| Icons | Lucide React (exact pin) | `lucide-react` 1.66.0 |
+| Icons | Lucide React (exact pin) | `lucide-react` 1.68.0 |
 | Lint / test | ESLint 10, Node’s test runner via `tsx` | `eslint` ^10.14.0, `tsx` ^4.23.15 |
 
-TypeScript 7.0 does not ship a compiler API. `npm run typecheck` runs the TypeScript 7 `tsc` binary. ESLint (`typescript-eslint`) and `next build` import the `typescript` package, which is aliased to `@typescript/typescript6` so those tools keep working. This is the side-by-side setup from the TypeScript 7.0 release.
+TypeScript 7.0 does not ship a compiler API, and `typescript-eslint` still peers `typescript` below 6.1.0. `typescript` is pinned to 6.0.3, which has both `tsc` and the compiler API, so `npm run typecheck`, ESLint, and `next build` all use that package. `@types/node` stays on 24.x to match the Node 24 runtime.
 
 There is no Firebase, Stripe, database, or user account. Gameplay state is in memory. High score and sound preference stay in the browser.
 
@@ -119,7 +119,7 @@ Leaving the window or cancelling a touch clears movement so the ship does not st
 | `npm run build` | Production build. Succeeds when `OPENAI_API_KEY` is unset |
 | `npm start` | Serve the production build |
 | `npm run lint` | ESLint |
-| `npm run typecheck` | `tsc --noEmit` (TypeScript 7) |
+| `npm run typecheck` | `tsc --noEmit` (TypeScript 6.0.3) |
 | `npm test` | `tsx --test src/**/*.test.ts` |
 
 ## Testing and CI

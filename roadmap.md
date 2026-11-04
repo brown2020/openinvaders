@@ -9,7 +9,7 @@ Punchlist after the dependency maintenance pass. There are no open GitHub issues
 3. Replace the in-process advisor rate limit with a shared limiter if the key is enabled in production. The current ceilings (8/minute per address, 30/minute per instance) reset on every new server instance.
 4. Add a browser test that mounts the canvas for start, shoot, pause, and game over. Unit tests cover the status machine and the single-shot cap, and they do not mount the canvas.
 5. Scale or letterbox the 800×600 canvas on narrow screens. It is a fixed pixel surface today.
-6. When `typescript-eslint` supports TypeScript 7’s compiler API, drop the `@typescript/typescript6` alias and point `typescript` at TypeScript 7 directly. TypeScript 7.1 is still a beta (`7.1.0-beta`); the stable compiler is 7.0.2. `typescript-eslint` 8.72.1 still peers `typescript` `<6.1.0`, so the alias stays. Next.js 16.5 is canary-only; the stable release stays 16.4.3.
+6. When `typescript-eslint` supports TypeScript 7’s compiler API, point `typescript` at TypeScript 7. It stays on 6.0.3: TypeScript 7.0 has no compiler API, 7.1 is still `7.1.0-beta`, and `typescript-eslint` 8.72.1 still peers `typescript` `<6.1.0`. Next.js 16.5 is canary-only; the stable release is 16.4.5. `@types/node` stays on 24.x for the Node 24 runtime.
 
 ## Known gaps
 
